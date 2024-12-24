@@ -20,7 +20,7 @@ mults = [[1,1,1],
          ]
 mult_labels = {}
 money = [10] # In dollars
-remaining_spins = [10]
+remaining_spins = [1]
 
 def ease_in_out_derivative(t):
     # Derivative of ease_in_out function t^2(3-2t)
@@ -82,9 +82,9 @@ def spin_button_click():
     chosen_colors = []
     for j in range(3):
         column = []
-        for i in range(len(colors)):
+        for i in range(7):
             #column.append(colors[2])
-            column.append(colors[random.randint(0,6)])
+            column.append(colors[random.randint(0,len(colors)-1)])
         chosen_colors.append(column)
         
     start_time = time.perf_counter()
@@ -92,6 +92,7 @@ def spin_button_click():
     money_label.configure(text=f"Money: ${money[0]}")
     spin(chosen_colors, start_time, start_time)
     calculate_paylines(chosen_colors)
+    print(chosen_colors)
 
 def mult_purchase(row_frames, row, column):
     for frame in row_frames:
@@ -119,6 +120,26 @@ def buy_mult_click():
         for j in range(3):
             button = ctk.CTkButton(row_frame, width=50*SF, height=100*SF, command=lambda i=i, j=j: mult_purchase(row_frames, i, j))
             button.pack(side="left", anchor="nw")
+
+def color_remove_click():
+    if color_remove_button.cget("text") != "Remove":
+        color_remove_options.pack(side="bottom", pady=5)
+        color_remove_button.configure(text="Remove")
+    elif color_remove_options.get() == "Select a Color":
+        color_remove_button.configure(text="Select Color!", state="disabled")
+        win.after(1000, lambda: color_remove_button.configure(text="Remove", state="normal"))
+    else:
+        selected_color = color_remove_options.get()
+        colors.remove(selected_color)
+        color_remove_options.configure(values = [color for color in colors])
+        color_remove_options.set("Select a Color")
+        color_remove_options.pack_forget()
+        color_remove_button.configure(text="Remove a Color")
+        print(colors)
+
+def color_add_click():
+    colors.append("red")
+    print(colors)
 
 def create_spinner(): 
     # Reels
@@ -160,14 +181,14 @@ def update_spin_map(spinning_reels, chosen_colors, count):
         # Randomly change the colors for every reel that's still spinning
         for column in range(2, 3-spinning_reels, -1):
             last_rectangle = spin_map[column].pop()
-            random_color = colors[random.randint(0,6)]
+            random_color = colors[random.randint(0,len(colors)-1)]
             canvas.itemconfig(spin_map[column][-1][0], fill=random_color)
             spin_map[column][-1] = (spin_map[column][-1][0], random_color)
             spin_map[column].insert(0, last_rectangle)
     else: # Otherwise, randomly select colors for every spinning reel
         for column in range(2, 2-spinning_reels, -1):
             last_rectangle = spin_map[column].pop()
-            random_color = colors[random.randint(0,6)]
+            random_color = colors[random.randint(0,len(colors)-1)]
             canvas.itemconfig(spin_map[column][-1][0], fill=random_color)
             spin_map[column][-1] = (spin_map[column][-1][0], random_color)
             spin_map[column].insert(0, last_rectangle)
@@ -263,9 +284,15 @@ spin_button = ctk.CTkButton(control_frame, text="Spin", command=spin_button_clic
 shop_frame = ctk.CTkScrollableFrame(control_frame, height=500)
 items_frame1_title = ctk.CTkLabel(shop_frame, text="Multipliers")
 items_frame1 = ctk.CTkFrame(shop_frame, height=100)
-items_frame2_title = ctk.CTkLabel(shop_frame, text="Placeholder")
-items_frame2 = ctk.CTkFrame(shop_frame, height=100)
+items_frame2_title = ctk.CTkLabel(shop_frame, text="Chance modifiers")
+items_frame2 = ctk.CTkFrame(shop_frame, height=300)
+color_remove_frame = ctk.CTkFrame(items_frame2, fg_color="transparent")
 buy_mult_button = ctk.CTkButton(items_frame1, width=100, height=50, text="Buy Mult", command=buy_mult_click)
+color_remove_button = ctk.CTkButton(color_remove_frame, width=100, height=50, text="Remove a Color", command=color_remove_click)
+color_remove_options = ctk.CTkComboBox(color_remove_frame, width=100, height=25, values=[color for color in colors])
+color_remove_options.set("Select a Color")
+color_add_button = ctk.CTkButton(items_frame2, width=100, height=50, text="Add a Color", command=color_add_click)
+
 money_label.pack()
 cost_to_spin_label.pack()
 spin_button.pack(pady=20, padx=10)
@@ -279,9 +306,17 @@ items_frame2_title.pack()
 items_frame2.pack_propagate(False)
 items_frame2.pack(fill="x", padx=10)
 buy_mult_button.pack(side="left", padx=10)
+color_remove_frame.pack(side="left", padx=10)
+color_remove_button.pack(padx=10)
+color_add_button.pack(side="left", padx=10)
 
 game_over_font = ctk.CTkFont(family="Arial", size=100, weight="bold")
 game_over_label = ctk.CTkLabel(win, text="You Lost :(", font=game_over_font)
+
+# Implement rounds system - shop shows up when spins remaining is zero. Will rename spin button to "Next Round"
+# Add more things in the shop, ex. removing a color which would increase the odds of a hit
+# -> Can buy perma free spins per round to a max of 5(?) out of total 10 spins
+# -> Maybe also increase value of line pay (rn its $10 can upgrade to $20+)
 
 shop_frame.pack_forget()
 win.mainloop()
