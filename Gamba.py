@@ -3,6 +3,7 @@ import customtkinter as ctk
 import random
 import time
 from PIL import Image, ImageTk
+from pygame.display import update
 
 win = ctk.CTk()
 win.title("Gamba")
@@ -19,6 +20,7 @@ mults = [[1,1,1],
          [1,1,1]
          ]
 mult_labels = {}
+probability_labels = {}
 money = [10] # In dollars
 remaining_spins = [1]
 
@@ -121,6 +123,11 @@ def buy_mult_click():
             button = ctk.CTkButton(row_frame, width=50*SF, height=100*SF, command=lambda i=i, j=j: mult_purchase(row_frames, i, j))
             button.pack(side="left", anchor="nw")
 
+def update_probabilities():
+    for color, label in probability_labels.items():
+        num_colors = colors.count(color)
+        label.configure(text=f"{color} \n {num_colors/len(colors)*100:.1f}%")
+
 def color_remove_click():
     if color_remove_button.cget("text") != "Remove":
         spin_button.configure(state="disabled")
@@ -132,6 +139,7 @@ def color_remove_click():
     else:
         selected_color = color_remove_options.get()
         colors.remove(selected_color)
+        update_probabilities()
         color_remove_options.configure(values = [color for color in colors])
         color_remove_options.set("Select a Color")
         color_remove_options.pack_forget()
@@ -150,6 +158,7 @@ def color_add_click():
     else:
         selected_color = color_add_options.get()
         colors.append(selected_color)
+        update_probabilities()
         color_add_options.set("Select a Color!")
         color_add_options.pack_forget()
         color_add_button.configure(text="Add a Color")
@@ -300,9 +309,10 @@ shop_frame = ctk.CTkScrollableFrame(control_frame, height=500)
 items_frame1_title = ctk.CTkLabel(shop_frame, text="Multipliers")
 items_frame1 = ctk.CTkFrame(shop_frame, height=100)
 items_frame2_title = ctk.CTkLabel(shop_frame, text="Chance modifiers")
-items_frame2 = ctk.CTkFrame(shop_frame, height=300)
+items_frame2 = ctk.CTkFrame(shop_frame, height=150)
 color_remove_frame = ctk.CTkFrame(items_frame2, fg_color="transparent")
 color_add_frame = ctk.CTkFrame(items_frame2, fg_color="transparent")
+probability_labels_frame = ctk.CTkFrame(shop_frame)
 buy_mult_button = ctk.CTkButton(items_frame1, width=100, height=50, text="Buy Mult", command=buy_mult_click)
 color_remove_button = ctk.CTkButton(color_remove_frame, width=100, height=50, text="Remove a Color", command=color_remove_click)
 color_remove_options = ctk.CTkComboBox(color_remove_frame, width=100, height=25, values=[color for color in colors], state="readonly")
@@ -328,6 +338,14 @@ color_remove_frame.pack(side="left", padx=10)
 color_remove_button.pack(padx=10)
 color_add_frame.pack(side="left", padx=10)
 color_add_button.pack(padx=10)
+probability_labels_frame.pack(side="bottom", fill="x", pady=10)
+
+for color in colors:
+    probability_labels[f"{color}"] = ctk.CTkLabel(probability_labels_frame, text=f"{color} \n 14.3%")
+    probability_labels[f"{color}"].pack(side="left", fill="x", expand=True)
+
+print(probability_labels)
+
 
 game_over_font = ctk.CTkFont(family="Arial", size=100, weight="bold")
 game_over_label = ctk.CTkLabel(win, text="You Lost :(", font=game_over_font)
