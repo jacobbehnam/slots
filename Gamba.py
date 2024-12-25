@@ -123,6 +123,7 @@ def buy_mult_click():
 
 def color_remove_click():
     if color_remove_button.cget("text") != "Remove":
+        spin_button.configure(state="disabled")
         color_remove_options.pack(side="bottom", pady=5)
         color_remove_button.configure(text="Remove")
     elif color_remove_options.get() == "Select a Color":
@@ -135,11 +136,25 @@ def color_remove_click():
         color_remove_options.set("Select a Color")
         color_remove_options.pack_forget()
         color_remove_button.configure(text="Remove a Color")
+        spin_button.configure(state="normal")
         print(colors)
 
 def color_add_click():
-    colors.append("red")
-    print(colors)
+    if color_add_button.cget("text") != "Add":
+        spin_button.configure(state="disabled")
+        color_add_options.pack(side="bottom", pady=5)
+        color_add_button.configure(text="Add")
+    elif color_add_options.get() == "Select a Color":
+        color_add_button.configure(text="Select Color!", state="disabled")
+        win.after(1000, lambda: color_add_button.configure(text="Add", state="normal"))
+    else:
+        selected_color = color_add_options.get()
+        colors.append(selected_color)
+        color_add_options.set("Select a Color!")
+        color_add_options.pack_forget()
+        color_add_button.configure(text="Add a Color")
+        spin_button.configure(state="normal")
+        print(colors)
 
 def create_spinner(): 
     # Reels
@@ -287,11 +302,14 @@ items_frame1 = ctk.CTkFrame(shop_frame, height=100)
 items_frame2_title = ctk.CTkLabel(shop_frame, text="Chance modifiers")
 items_frame2 = ctk.CTkFrame(shop_frame, height=300)
 color_remove_frame = ctk.CTkFrame(items_frame2, fg_color="transparent")
+color_add_frame = ctk.CTkFrame(items_frame2, fg_color="transparent")
 buy_mult_button = ctk.CTkButton(items_frame1, width=100, height=50, text="Buy Mult", command=buy_mult_click)
 color_remove_button = ctk.CTkButton(color_remove_frame, width=100, height=50, text="Remove a Color", command=color_remove_click)
-color_remove_options = ctk.CTkComboBox(color_remove_frame, width=100, height=25, values=[color for color in colors])
+color_remove_options = ctk.CTkComboBox(color_remove_frame, width=100, height=25, values=[color for color in colors], state="readonly")
 color_remove_options.set("Select a Color")
-color_add_button = ctk.CTkButton(items_frame2, width=100, height=50, text="Add a Color", command=color_add_click)
+color_add_button = ctk.CTkButton(color_add_frame, width=100, height=50, text="Add a Color", command=color_add_click)
+color_add_options = ctk.CTkComboBox(color_add_frame, width=100, height=25, values=["purple", "green", "pink", "yellow", "red", "blue", "black"], state="readonly")
+color_add_options.set("Select a Color")
 
 money_label.pack()
 cost_to_spin_label.pack()
@@ -308,7 +326,8 @@ items_frame2.pack(fill="x", padx=10)
 buy_mult_button.pack(side="left", padx=10)
 color_remove_frame.pack(side="left", padx=10)
 color_remove_button.pack(padx=10)
-color_add_button.pack(side="left", padx=10)
+color_add_frame.pack(side="left", padx=10)
+color_add_button.pack(padx=10)
 
 game_over_font = ctk.CTkFont(family="Arial", size=100, weight="bold")
 game_over_label = ctk.CTkLabel(win, text="You Lost :(", font=game_over_font)
