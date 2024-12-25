@@ -23,6 +23,7 @@ mult_labels = {}
 probability_labels = {}
 money = [10] # In dollars
 remaining_spins = [1]
+current_round = [1]
 
 def ease_in_out_derivative(t):
     # Derivative of ease_in_out function t^2(3-2t)
@@ -52,6 +53,8 @@ def animate_paylines():
             spins_remaining_label.configure(text=f"Spins remaining: {remaining_spins[0]}")
             spin_button.configure(state="normal")
             if remaining_spins[0] == 0:
+                spin_button.pack_forget()
+                continue_button.pack(pady=20, padx=10)
                 shop_frame.pack(fill="both", pady=10)
 
 def calculate_paylines(chosen_colors):
@@ -95,6 +98,13 @@ def spin_button_click():
     spin(chosen_colors, start_time, start_time)
     calculate_paylines(chosen_colors)
     print(chosen_colors)
+    
+def continue_button_click():
+    continue_button.pack_forget()
+    shop_frame.pack_forget()
+    spin_button.pack(pady=20, padx=10)
+    current_round[0] += 1
+    rounds_label.configure(text=f"Round {current_round[0]}")
 
 def mult_purchase(row_frames, row, column):
     for frame in row_frames:
@@ -130,7 +140,7 @@ def update_probabilities():
 
 def color_remove_click():
     if color_remove_button.cget("text") != "Remove":
-        spin_button.configure(state="disabled")
+        continue_button.configure(state="disabled")
         color_remove_options.pack(side="bottom", pady=5)
         color_remove_button.configure(text="Remove")
     elif color_remove_options.get() == "Select a Color":
@@ -144,12 +154,12 @@ def color_remove_click():
         color_remove_options.set("Select a Color")
         color_remove_options.pack_forget()
         color_remove_button.configure(text="Remove a Color")
-        spin_button.configure(state="normal")
+        continue_button.configure(state="normal")
         print(colors)
 
 def color_add_click():
     if color_add_button.cget("text") != "Add":
-        spin_button.configure(state="disabled")
+        continue_button.configure(state="disabled")
         color_add_options.pack(side="bottom", pady=5)
         color_add_button.configure(text="Add")
     elif color_add_options.get() == "Select a Color":
@@ -162,7 +172,7 @@ def color_add_click():
         color_add_options.set("Select a Color!")
         color_add_options.pack_forget()
         color_add_button.configure(text="Add a Color")
-        spin_button.configure(state="normal")
+        continue_button.configure(state="normal")
         print(colors)
 
 def create_spinner(): 
@@ -305,14 +315,15 @@ spins_remaining_label = ctk.CTkLabel(control_frame, width=100, height=50, text=f
 rounds_label.pack(side="top", anchor="nw")
 spins_remaining_label.pack(side="top", anchor="nw", padx=25)
 spin_button = ctk.CTkButton(control_frame, text="Spin", command=spin_button_click)
+continue_button = ctk.CTkButton(control_frame, text="Continue", command=continue_button_click)
 shop_frame = ctk.CTkScrollableFrame(control_frame, height=500)
 items_frame1_title = ctk.CTkLabel(shop_frame, text="Multipliers")
 items_frame1 = ctk.CTkFrame(shop_frame, height=100)
 items_frame2_title = ctk.CTkLabel(shop_frame, text="Chance modifiers")
-items_frame2 = ctk.CTkFrame(shop_frame, height=150)
+items_frame2 = ctk.CTkFrame(shop_frame, height=100)
 color_remove_frame = ctk.CTkFrame(items_frame2, fg_color="transparent")
 color_add_frame = ctk.CTkFrame(items_frame2, fg_color="transparent")
-probability_labels_frame = ctk.CTkFrame(shop_frame)
+probability_labels_frame = ctk.CTkFrame(control_frame, fg_color="#A9A9A9")
 buy_mult_button = ctk.CTkButton(items_frame1, width=100, height=50, text="Buy Mult", command=buy_mult_click)
 color_remove_button = ctk.CTkButton(color_remove_frame, width=100, height=50, text="Remove a Color", command=color_remove_click)
 color_remove_options = ctk.CTkComboBox(color_remove_frame, width=100, height=25, values=[color for color in colors], state="readonly")
@@ -341,14 +352,13 @@ color_add_button.pack(padx=10)
 probability_labels_frame.pack(side="bottom", fill="x", pady=10)
 
 for color in colors:
-    probability_labels[f"{color}"] = ctk.CTkLabel(probability_labels_frame, text=f"{color} \n 14.3%")
+    probability_labels[f"{color}"] = ctk.CTkLabel(probability_labels_frame, text=f"{color} \n 14.3%", text_color=f"{color}")
     probability_labels[f"{color}"].pack(side="left", fill="x", expand=True)
 
 print(probability_labels)
 
-
 game_over_font = ctk.CTkFont(family="Arial", size=100, weight="bold")
-game_over_label = ctk.CTkLabel(win, text="You Lost :(", font=game_over_font)
+game_over_label = ctk.CTkLabel(win, text="You Lost :(", font=game_over_font, text_color="red")
 
 # Implement rounds system - shop shows up when spins remaining is zero. Will rename spin button to "Next Round"
 # Add more things in the shop, ex. removing a color which would increase the odds of a hit
