@@ -53,6 +53,12 @@ def animate_paylines():
             spins_remaining_label.configure(text=f"Spins remaining: {remaining_spins[0]}")
             spin_button.configure(state="normal")
             if remaining_spins[0] == 0:
+                bonus_payout = ctk.CTkLabel(canvas, text=f"Round \n Complete \n Bonus: \n ${current_round[0]*5}", font=("Arial", 100, "bold"))
+                bonus_payout.place(x=55, y=45)
+                money[0] += current_round[0]*5
+                money_label.configure(text=f"Money: ${money[0]}")
+                win.after(2000, lambda: bonus_payout.destroy())
+                win.after(2000, lambda: continue_button.configure(state="normal"))
                 spin_button.pack_forget()
                 continue_button.pack(pady=20, padx=10)
                 shop_frame.pack(fill="both", pady=10)
@@ -93,17 +99,21 @@ def spin_button_click():
         chosen_colors.append(column)
         
     start_time = time.perf_counter()
-    money[0] -= 1 # Price per spin
+    money[0] -= current_round[0]-1 # Price per spin
     money_label.configure(text=f"Money: ${money[0]}")
     spin(chosen_colors, start_time, start_time)
     calculate_paylines(chosen_colors)
     print(chosen_colors)
     
 def continue_button_click():
+    continue_button.configure(state="disabled")
     continue_button.pack_forget()
     shop_frame.pack_forget()
     spin_button.pack(pady=20, padx=10)
     current_round[0] += 1
+    cost_to_spin_label.configure(text=f"Cost per spin: ${current_round[0]-1}")
+    remaining_spins[0] = 10
+    spins_remaining_label.configure(text=f"Spins remaining: {remaining_spins[0]}")
     rounds_label.configure(text=f"Round {current_round[0]}")
 
 def mult_purchase(row_frames, row, column):
@@ -315,7 +325,7 @@ spins_remaining_label = ctk.CTkLabel(control_frame, width=100, height=50, text=f
 rounds_label.pack(side="top", anchor="nw")
 spins_remaining_label.pack(side="top", anchor="nw", padx=25)
 spin_button = ctk.CTkButton(control_frame, text="Spin", command=spin_button_click)
-continue_button = ctk.CTkButton(control_frame, text="Continue", command=continue_button_click)
+continue_button = ctk.CTkButton(control_frame, text="Continue", state="disabled", command=continue_button_click)
 shop_frame = ctk.CTkScrollableFrame(control_frame, height=500)
 items_frame1_title = ctk.CTkLabel(shop_frame, text="Multipliers")
 items_frame1 = ctk.CTkFrame(shop_frame, height=100)
