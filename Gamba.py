@@ -106,17 +106,21 @@ def spin_button_click():
     print(chosen_colors)
     
 def continue_button_click():
-    continue_button.configure(state="disabled")
-    continue_button.pack_forget()
-    shop_frame.pack_forget()
-    spin_button.pack(pady=20, padx=10)
     current_round[0] += 1
-    cost_to_spin_label.configure(text=f"Cost per spin: ${current_round[0]-1}")
-    remaining_spins[0] = 10
-    spins_remaining_label.configure(text=f"Spins remaining: {remaining_spins[0]}")
-    rounds_label.configure(text=f"Round {current_round[0]}")
+    if money[0] < current_round[0]-1:
+        game_over(time.perf_counter(), time.perf_counter())
+    else:
+        continue_button.configure(state="disabled")
+        continue_button.pack_forget()
+        shop_frame.pack_forget()
+        spin_button.pack(pady=20, padx=10)
+        cost_to_spin_label.configure(text=f"Cost per spin: ${current_round[0]-1}")
+        remaining_spins[0] = 10
+        spins_remaining_label.configure(text=f"Spins remaining: {remaining_spins[0]}")
+        rounds_label.configure(text=f"Round {current_round[0]}")
 
 def mult_purchase(row_frames, row, column):
+    continue_button.configure(state="normal")
     for frame in row_frames:
         frame.destroy()
     new_mult = mults[row][column] + 1
@@ -133,15 +137,22 @@ def mult_purchase(row_frames, row, column):
     label.place(x=0 + column*50*SF, y=20 * SF + row*50*SF)
         
 def buy_mult_click():
-    row_frames = []
-    for i in range(3):
-        row_frame = ctk.CTkFrame(canvas, width=150*SF)
-        row_frames.append(row_frame)
-        row_frame.pack_propagate(False)
-        row_frame.pack()
-        for j in range(3):
-            button = ctk.CTkButton(row_frame, width=50*SF, height=100*SF, command=lambda i=i, j=j: mult_purchase(row_frames, i, j))
-            button.pack(side="left", anchor="nw")
+    if money[0] >= 5:
+        money[0] -= 5
+        money_label.configure(text=f"Money: ${money[0]}")
+        continue_button.configure(state="disabled")
+        row_frames = []
+        for i in range(3):
+            row_frame = ctk.CTkFrame(canvas, width=150*SF)
+            row_frames.append(row_frame)
+            row_frame.pack_propagate(False)
+            row_frame.pack()
+            for j in range(3):
+                button = ctk.CTkButton(row_frame, width=50*SF, height=100*SF, command=lambda i=i, j=j: mult_purchase(row_frames, i, j))
+                button.pack(side="left", anchor="nw")
+    else:
+        buy_mult_button.configure(text="Not enough money!", state="disabled")
+        win.after(1000, lambda: buy_mult_button.configure(text="Buy Mult \n $5", state="normal"))
 
 def update_probabilities():
     for color, label in probability_labels.items():
@@ -149,42 +160,54 @@ def update_probabilities():
         label.configure(text=f"{color} \n {num_colors/len(colors)*100:.1f}%")
 
 def color_remove_click():
-    if color_remove_button.cget("text") != "Remove":
-        continue_button.configure(state="disabled")
-        color_remove_options.pack(side="bottom", pady=5)
-        color_remove_button.configure(text="Remove")
-    elif color_remove_options.get() == "Select a Color":
-        color_remove_button.configure(text="Select Color!", state="disabled")
-        win.after(1000, lambda: color_remove_button.configure(text="Remove", state="normal"))
+    if money[0] >= 50:
+        if color_remove_button.cget("text") != "Remove":
+            continue_button.configure(state="disabled")
+            color_remove_options.pack(side="bottom", pady=5)
+            color_remove_button.configure(text="Remove")
+        elif color_remove_options.get() == "Select a Color":
+            color_remove_button.configure(text="Select Color!", state="disabled")
+            win.after(1000, lambda: color_remove_button.configure(text="Remove", state="normal"))
+        else:
+            money[0] -= 50
+            money_label.configure(text=f"Money: ${money[0]}")
+            selected_color = color_remove_options.get()
+            colors.remove(selected_color)
+            update_probabilities()
+            color_remove_options.configure(values = [color for color in colors])
+            color_remove_options.set("Select a Color")
+            color_remove_options.pack_forget()
+            color_remove_button.configure(text="Remove a Color")
+            continue_button.configure(state="normal")
+            print(colors)
     else:
-        selected_color = color_remove_options.get()
-        colors.remove(selected_color)
-        update_probabilities()
-        color_remove_options.configure(values = [color for color in colors])
-        color_remove_options.set("Select a Color")
-        color_remove_options.pack_forget()
-        color_remove_button.configure(text="Remove a Color")
-        continue_button.configure(state="normal")
-        print(colors)
+        color_remove_button.configure(text="Not enough money!", state="disabled")
+        win.after(1000, lambda: color_remove_button.configure(text="Remove a Color \n $50", state="normal"))
 
 def color_add_click():
-    if color_add_button.cget("text") != "Add":
-        continue_button.configure(state="disabled")
-        color_add_options.pack(side="bottom", pady=5)
-        color_add_button.configure(text="Add")
-    elif color_add_options.get() == "Select a Color":
-        color_add_button.configure(text="Select Color!", state="disabled")
-        win.after(1000, lambda: color_add_button.configure(text="Add", state="normal"))
+    if money[0] >= 15:
+        if color_add_button.cget("text") != "Add":
+            continue_button.configure(state="disabled")
+            color_add_options.pack(side="bottom", pady=5)
+            color_add_button.configure(text="Add")
+        elif color_add_options.get() == "Select a Color":
+            color_add_button.configure(text="Select Color!", state="disabled")
+            win.after(1000, lambda: color_add_button.configure(text="Add", state="normal"))
+        else:
+            money[0] -= 15
+            money_label.configure(text=f"Money: ${money[0]}")
+            selected_color = color_add_options.get()
+            colors.append(selected_color)
+            update_probabilities()
+            color_add_options.set("Select a Color!")
+            color_add_options.pack_forget()
+            color_add_button.configure(text="Add a Color")
+            continue_button.configure(state="normal")
+            print(colors)
     else:
-        selected_color = color_add_options.get()
-        colors.append(selected_color)
-        update_probabilities()
-        color_add_options.set("Select a Color!")
-        color_add_options.pack_forget()
-        color_add_button.configure(text="Add a Color")
-        continue_button.configure(state="normal")
-        print(colors)
-
+        color_add_button.configure(text="Not enough money!", state="disabled")
+        win.after(1000, lambda: color_add_button.configure(text="Add a Color \n $15", state="normal"))
+        
 def create_spinner(): 
     # Reels
     color_heights = (600/(len(colors)-1))*SF
@@ -334,11 +357,11 @@ items_frame2 = ctk.CTkFrame(shop_frame, height=100)
 color_remove_frame = ctk.CTkFrame(items_frame2, fg_color="transparent")
 color_add_frame = ctk.CTkFrame(items_frame2, fg_color="transparent")
 probability_labels_frame = ctk.CTkFrame(control_frame, fg_color="#A9A9A9")
-buy_mult_button = ctk.CTkButton(items_frame1, width=100, height=50, text="Buy Mult", command=buy_mult_click)
-color_remove_button = ctk.CTkButton(color_remove_frame, width=100, height=50, text="Remove a Color", command=color_remove_click)
+buy_mult_button = ctk.CTkButton(items_frame1, width=100, height=50, text="Buy Mult \n $5", command=buy_mult_click)
+color_remove_button = ctk.CTkButton(color_remove_frame, width=100, height=50, text="Remove a Color \n $50", command=color_remove_click)
 color_remove_options = ctk.CTkComboBox(color_remove_frame, width=100, height=25, values=[color for color in colors], state="readonly")
 color_remove_options.set("Select a Color")
-color_add_button = ctk.CTkButton(color_add_frame, width=100, height=50, text="Add a Color", command=color_add_click)
+color_add_button = ctk.CTkButton(color_add_frame, width=100, height=50, text="Add a Color \n $15", command=color_add_click)
 color_add_options = ctk.CTkComboBox(color_add_frame, width=100, height=25, values=["purple", "green", "pink", "yellow", "red", "blue", "black"], state="readonly")
 color_add_options.set("Select a Color")
 
@@ -370,8 +393,7 @@ print(probability_labels)
 game_over_font = ctk.CTkFont(family="Arial", size=100, weight="bold")
 game_over_label = ctk.CTkLabel(win, text="You Lost :(", font=game_over_font, text_color="red")
 
-# Implement rounds system - shop shows up when spins remaining is zero. Will rename spin button to "Next Round"
-# Add more things in the shop, ex. removing a color which would increase the odds of a hit
+# Known bug: money doesn't subtract until you press add/remove a color button twice, causing issues if you press it once with enough money and don't have enough money on the second press
 # -> Can buy perma free spins per round to a max of 5(?) out of total 10 spins
 # -> Maybe also increase value of line pay (rn its $10 can upgrade to $20+)
 
