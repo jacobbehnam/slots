@@ -3,7 +3,6 @@ import customtkinter as ctk
 import random
 import time
 from PIL import Image, ImageTk
-from pygame.display import update
 
 win = ctk.CTk()
 win.title("Gamba")
@@ -28,6 +27,10 @@ current_round = [1]
 def ease_in_out_derivative(t):
     # Derivative of ease_in_out function t^2(3-2t)
     return 6*t*(1-t)
+
+def start_button_click():
+    start_frame.pack_forget()
+    game_frame.pack(expand=True, fill="both")
 
 def animate_paylines():
     if money[0] <= 0:
@@ -262,14 +265,28 @@ def update_spin_map(spinning_reels, chosen_colors, count):
             
     return spin_map
 
-def game_over(start_time, last_time, x=-300):
+def restart_game():
+    game_frame.pack_forget()
+    start_frame.pack(expand=True, fill="both")
+    colors.clear()
+    colors.extend(["purple", "green", "pink", "yellow", "red", "blue", "black"])
+    mults.clear()
+    mults.extend([[1, 1, 1],
+                  [1, 1, 1],
+                  [1, 1, 1]
+                ])
+    
+
+def game_over(start_time, last_time, x=-600):
     wheight, wwidth = win.winfo_height(), win.winfo_width()
     current_time = time.perf_counter()
     elapsed = (current_time-start_time)/1.5
     dt = current_time - last_time
     if elapsed > 1:
         elapsed = 1
-    ease_velocity = ease_in_out_derivative(elapsed) * (wwidth / 3.5)
+        win.after(500, restart_game)
+        win.after(500, lambda: game_over_label.place(x=-600, y=wheight//4))
+    ease_velocity = ease_in_out_derivative(elapsed) * (wwidth / 2.5)
     move_amount = (ease_velocity*dt)/1.5
     
     game_over_label.place(x=x+move_amount, y=wheight//4)
@@ -325,14 +342,23 @@ def spin(chosen_colors, start_time, last_time, reel = 1, count = 0, total_moved 
 
 # All the UI elements
 # I wish I could put these in a function :\ (I regret not making this with OOP)
+
+start_frame = ctk.CTkFrame(win)
+start_frame.pack(expand=True, fill="both")
+start_button = ctk.CTkButton(start_frame, text="Press to play", command=start_button_click)
+start_button.pack(pady=200)
+
+game_frame = ctk.CTkFrame(win)
+#game_frame.pack(expand=True, fill="both")
+
 # Left UI
-slot_frame = ctk.CTkFrame(win, fg_color="transparent")
+slot_frame = ctk.CTkFrame(game_frame, fg_color="transparent")
 canvas = tk.Canvas(slot_frame, width=300*SF, height=300*SF, bg="black", highlightthickness=0)
 le_slot_image = Image.open("Le Slot.png")
 le_slot = ctk.CTkImage(le_slot_image, size=(125*SF, 21*SF))
 slot_title = ctk.CTkLabel(slot_frame, image=le_slot, text="")
 slot_frame.pack(side="left", padx=100, expand=True)
-control_frame = ctk.CTkFrame(win, width=50*SF, height=300*SF)
+control_frame = ctk.CTkFrame(game_frame, width=50*SF, height=300*SF)
 control_frame.pack_propagate(False)
 control_frame.pack(side="right", fill="both", expand=True)
 slot_title.pack(pady=10)
@@ -351,9 +377,9 @@ spin_button = ctk.CTkButton(control_frame, text="Spin", command=spin_button_clic
 continue_button = ctk.CTkButton(control_frame, text="Continue", state="disabled", command=continue_button_click)
 shop_frame = ctk.CTkScrollableFrame(control_frame, height=500)
 items_frame1_title = ctk.CTkLabel(shop_frame, text="Multipliers")
-items_frame1 = ctk.CTkFrame(shop_frame, height=100)
+items_frame1 = ctk.CTkFrame(shop_frame, height=100, fg_color="#A9A9A9")
 items_frame2_title = ctk.CTkLabel(shop_frame, text="Chance modifiers")
-items_frame2 = ctk.CTkFrame(shop_frame, height=100)
+items_frame2 = ctk.CTkFrame(shop_frame, height=100, fg_color="#A9A9A9")
 color_remove_frame = ctk.CTkFrame(items_frame2, fg_color="transparent")
 color_add_frame = ctk.CTkFrame(items_frame2, fg_color="transparent")
 probability_labels_frame = ctk.CTkFrame(control_frame, fg_color="#A9A9A9")
