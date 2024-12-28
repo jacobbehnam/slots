@@ -204,7 +204,7 @@ def color_add_click():
             update_probabilities()
             color_add_options.set("Select a Color!")
             color_add_options.pack_forget()
-            color_add_button.configure(text="Add a Color")
+            color_add_button.configure(text="Add a Color \n $15")
             continue_button.configure(state="normal")
             print(colors)
     else:
@@ -275,7 +275,20 @@ def restart_game():
                   [1, 1, 1],
                   [1, 1, 1]
                 ])
-    
+    money[0] = 10
+    remaining_spins[0] = 1
+    current_round[0] = 1
+    money_label.configure(text=f"Money: ${money[0]}")
+    spins_remaining_label.configure(text=f"Spins remaining: {remaining_spins[0]}")
+    rounds_label.configure(text=f"Round {current_round[0]}")
+    shop_frame.pack_forget()
+    continue_button.configure(state="normal")
+    continue_button.pack_forget()
+    spin_button.pack()
+    for mult_label in mult_labels.values():
+        mult_label[0].destroy()
+    mult_labels.clear()
+    update_probabilities()
 
 def game_over(start_time, last_time, x=-600):
     wheight, wwidth = win.winfo_height(), win.winfo_width()
