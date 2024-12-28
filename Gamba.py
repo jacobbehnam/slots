@@ -225,6 +225,17 @@ def create_spinner():
         canvas.create_line(100*SF*i, 0, 100*SF*i, 300*SF, width=10, fill="lightsteelblue2")
     canvas.create_line(5, 0, 5, 300*SF, width=10, fill="lightsteelblue2")
     canvas.create_line(300*SF - 5, 0, 300*SF - 5, 300 * SF, width=10, fill="lightsteelblue2")
+    
+def create_start_screen():
+    title_frame = ctk.CTkFrame(start_frame, fg_color="transparent")
+    title_text = ctk.CTkLabel(title_frame, text="Slot Machine Simulator", font=("Arial", 75, "bold"))
+    subtitle_text = ctk.CTkLabel(title_frame, text="gambling is bad, but not if you aren't spending real money!", font=("Arial", 30))
+    start_button = ctk.CTkButton(title_frame, text="Press to play", command=start_button_click)
+    title_frame.pack(expand=True)
+    title_text.pack(pady=10)
+    subtitle_text.pack()
+    start_button.pack(pady=40)
+    
 
 def create_spin_map():
     spin_map = []
@@ -358,8 +369,7 @@ def spin(chosen_colors, start_time, last_time, reel = 1, count = 0, total_moved 
 
 start_frame = ctk.CTkFrame(win)
 start_frame.pack(expand=True, fill="both")
-start_button = ctk.CTkButton(start_frame, text="Press to play", command=start_button_click)
-start_button.pack(pady=200)
+create_start_screen()
 
 game_frame = ctk.CTkFrame(win)
 #game_frame.pack(expand=True, fill="both")
