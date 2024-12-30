@@ -20,7 +20,7 @@ mults = [[1,1,1],
          ]
 mult_labels = {}
 probability_labels = {}
-money = [10] # In dollars
+money = [100] # In dollars
 remaining_spins = [1]
 current_round = [1]
 
@@ -87,9 +87,10 @@ def calculate_paylines(chosen_colors):
             canvas.create_line(150 * SF, ((payline[1][1] - 2) * 100 + 50) * SF, 250 * SF, ((payline[2][1] - 2) * 100 + 50) * SF, width=3, state="hidden", fill="grey", tags="payline")
             hits += 1
             mult = mults[0][payline[0][1]-2] * mults[1][payline[1][1]-2] * mults[2][payline[2][1]-2]
+            print(mult)
             line_pays += 10*mult
     if hits != 0:
-        money[0] += (line_pays/hits)*hits*hits
+        money[0] += line_pays*hits
     
 def spin_button_click():   
     spin_button.configure(state="disabled")
@@ -122,28 +123,38 @@ def continue_button_click():
         spins_remaining_label.configure(text=f"Spins remaining: {remaining_spins[0]}")
         rounds_label.configure(text=f"Round {current_round[0]}")
 
-def mult_purchase(row_frames, row, column):
-    continue_button.configure(state="normal")
+def mult_purchase(row_frames, row, column, purchased_mults):
     for frame in row_frames:
         frame.destroy()
-    new_mult = mults[row][column] + 1
-    mults[row][column] = new_mult
+    new_mult = mults[column][row] + 1
+    mults[column][row] = new_mult
     print(mults)
     
+    purchased_mults += 1
+    continue_button.configure(state="normal")
+    buy_mult_button.configure(state="normal", text=f"Buy Mult \n ${4 + 2**purchased_mults}")
+    
     if new_mult > 2:
-        old_label = mult_labels[(row, column)][0]
+        old_label = mult_labels[(column, row)][0]
         old_label.destroy()
     
     custom_font = ctk.CTkFont(family="Arial", size=20, weight="bold")
     label = ctk.CTkLabel(canvas, width=50 * SF, height=10 * SF, text=f"❌ {new_mult}", font=custom_font, fg_color="lightsteelblue2", text_color="white")
-    mult_labels[(row,column)] = [label, new_mult] 
+    mult_labels[(column,row)] = [label, new_mult] 
     label.place(x=0 + column*50*SF, y=20 * SF + row*50*SF)
         
 def buy_mult_click():
-    if money[0] >= 5:
-        money[0] -= 5
+    purchased_mults = 0
+    for i in mults:
+        for j in i:
+            purchased_mults += j
+    purchased_mults -= 9
+    
+    if money[0] >= (4 + 2**purchased_mults):
+        money[0] -= (4 + 2**purchased_mults)
         money_label.configure(text=f"Money: ${money[0]}")
         continue_button.configure(state="disabled")
+        buy_mult_button.configure(state="disabled")
         row_frames = []
         for i in range(3):
             row_frame = ctk.CTkFrame(canvas, width=150*SF)
@@ -151,11 +162,11 @@ def buy_mult_click():
             row_frame.pack_propagate(False)
             row_frame.pack()
             for j in range(3):
-                button = ctk.CTkButton(row_frame, width=50*SF, height=100*SF, command=lambda i=i, j=j: mult_purchase(row_frames, i, j))
+                button = ctk.CTkButton(row_frame, width=50*SF, height=100*SF, command=lambda i=i, j=j: mult_purchase(row_frames, i, j, purchased_mults))
                 button.pack(side="left", anchor="nw")
     else:
         buy_mult_button.configure(text="Not enough money!", state="disabled")
-        win.after(1000, lambda: buy_mult_button.configure(text="Buy Mult \n $5", state="normal"))
+        win.after(1000, lambda: buy_mult_button.configure(text=f"Buy Mult \n ${4+2**purchased_mults}", state="normal"))
 
 def update_probabilities():
     for color, label in probability_labels.items():
@@ -292,9 +303,11 @@ def restart_game():
     money_label.configure(text=f"Money: ${money[0]}")
     spins_remaining_label.configure(text=f"Spins remaining: {remaining_spins[0]}")
     rounds_label.configure(text=f"Round {current_round[0]}")
+    cost_to_spin_label.configure(text="Cost per spin: $0")
     shop_frame.pack_forget()
     continue_button.configure(state="normal")
     continue_button.pack_forget()
+    spin_button.configure(state="normal")
     spin_button.pack()
     for mult_label in mult_labels.values():
         mult_label[0].destroy()
@@ -443,6 +456,7 @@ game_over_font = ctk.CTkFont(family="Arial", size=100, weight="bold")
 game_over_label = ctk.CTkLabel(win, text="You Lost :(", font=game_over_font, text_color="red")
 
 # Known bug: money doesn't subtract until you press add/remove a color button twice, causing issues if you press it once with enough money and don't have enough money on the second press
+# Scaling with prices (constant price is too op)
 # -> Can buy perma free spins per round to a max of 5(?) out of total 10 spins
 # -> Maybe also increase value of line pay (rn its $10 can upgrade to $20+)
 
