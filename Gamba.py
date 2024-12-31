@@ -20,7 +20,7 @@ mults = [[1,1,1],
          ]
 mult_labels = {}
 probability_labels = {}
-money = [1000] # In dollars
+money = [10] # In dollars
 remaining_spins = [1]
 current_round = [1]
 colors_purchased = [0]
@@ -35,7 +35,7 @@ def start_button_click():
     game_frame.pack(expand=True, fill="both")
 
 def animate_paylines():
-    if money[0] <= 0:
+    if money[0] <= (((current_round[0]-2)**2)/2):
         game_over(time.perf_counter(), time.perf_counter())
     else:
         paylines = canvas.find_withtag("payline")
@@ -65,6 +65,8 @@ def animate_paylines():
                 win.after(2000, lambda: bonus_payout.destroy())
                 win.after(2000, lambda: continue_button.configure(state="normal"))
                 spin_button.pack_forget()
+                min_next_round_label.configure(text=f"Minimum for next round: ${10*((current_round[0])**2)/2}")
+                min_next_round_label.pack()
                 continue_button.pack(pady=20, padx=10)
                 shop_frame.pack(fill="both", pady=10)
 
@@ -105,7 +107,7 @@ def spin_button_click():
         chosen_colors.append(column)
         
     start_time = time.perf_counter()
-    money[0] -= current_round[0]-1 # Price per spin
+    money[0] -= ((current_round[0]-1)**2)/2 # Price per spin
     money_label.configure(text=f"Money: ${money[0]}")
     spin(chosen_colors, start_time, start_time)
     calculate_paylines(chosen_colors)
@@ -113,14 +115,15 @@ def spin_button_click():
     
 def continue_button_click():
     current_round[0] += 1
-    if money[0] < current_round[0]-1:
+    if money[0] < ((current_round[0]-1)**2)/2:
         game_over(time.perf_counter(), time.perf_counter())
     else:
         continue_button.configure(state="disabled")
         continue_button.pack_forget()
         shop_frame.pack_forget()
+        min_next_round_label.pack_forget()
         spin_button.pack(pady=20, padx=10)
-        cost_to_spin_label.configure(text=f"Cost per spin: ${current_round[0]-1}")
+        cost_to_spin_label.configure(text=f"Cost per spin: ${((current_round[0]-1)**2)/2}")
         remaining_spins[0] = 10
         spins_remaining_label.configure(text=f"Spins remaining: {remaining_spins[0]}")
         rounds_label.configure(text=f"Round {current_round[0]}")
@@ -176,7 +179,7 @@ def update_probabilities():
         label.configure(text=f"{color} \n {num_colors/len(colors)*100:.1f}%")
 
 def color_remove_click():
-    if money[0] >= (49 + 5**colors_removed[0]):
+    if money[0] >= (49 + 5**(colors_removed[0]*2)):
         if color_remove_button.cget("text") != "Remove":
             continue_button.configure(state="disabled")
             color_remove_options.pack(side="bottom", pady=5)
@@ -185,7 +188,7 @@ def color_remove_click():
             color_remove_button.configure(text="Select Color!", state="disabled")
             win.after(1000, lambda: color_remove_button.configure(text="Remove", state="normal"))
         else:
-            money[0] -= (49 + 5**colors_removed[0])
+            money[0] -= (49 + 5**(colors_removed[0]*2))
             colors_removed[0] += 1
             money_label.configure(text=f"Money: ${money[0]}")
             selected_color = color_remove_options.get()
@@ -194,15 +197,15 @@ def color_remove_click():
             color_remove_options.configure(values = [color for color in colors])
             color_remove_options.set("Select a Color")
             color_remove_options.pack_forget()
-            color_remove_button.configure(text=f"Remove a Color \n ${49 + 5**colors_removed[0]}")
+            color_remove_button.configure(text=f"Remove a Color \n ${(49 + 5**(colors_removed[0]*2))}")
             continue_button.configure(state="normal")
             print(colors)
     else:
         color_remove_button.configure(text="Not enough money!", state="disabled")
-        win.after(1000, lambda: color_remove_button.configure(text=f"Remove a Color \n ${49 + 5**colors_removed[0]}", state="normal"))
+        win.after(1000, lambda: color_remove_button.configure(text=f"Remove a Color \n ${(49 + 5**(colors_removed[0]*2))}", state="normal"))
 
 def color_add_click():
-    if money[0] >= (14 + 5**colors_purchased[0]):
+    if money[0] >= (14 + 5**(colors_purchased[0]*2)):
         if color_add_button.cget("text") != "Add":
             continue_button.configure(state="disabled")
             color_add_options.pack(side="bottom", pady=5)
@@ -211,7 +214,7 @@ def color_add_click():
             color_add_button.configure(text="Select Color!", state="disabled")
             win.after(1000, lambda: color_add_button.configure(text="Add", state="normal"))
         else:
-            money[0] -= (14 + 5**colors_purchased[0])
+            money[0] -= (14 + 5**(colors_purchased[0]*2))
             colors_purchased[0] += 1
             money_label.configure(text=f"Money: ${money[0]}")
             selected_color = color_add_options.get()
@@ -219,12 +222,12 @@ def color_add_click():
             update_probabilities()
             color_add_options.set("Select a Color!")
             color_add_options.pack_forget()
-            color_add_button.configure(text=f"Add a Color \n ${14 + 5**colors_purchased[0]}")
+            color_add_button.configure(text=f"Add a Color \n ${14 + 5**(colors_purchased[0]*2)}")
             continue_button.configure(state="normal")
             print(colors)
     else:
         color_add_button.configure(text="Not enough money!", state="disabled")
-        win.after(1000, lambda: color_add_button.configure(text=f"Add a Color \n ${14 + 5**colors_purchased[0]}", state="normal"))
+        win.after(1000, lambda: color_add_button.configure(text=f"Add a Color \n ${14 + 5**(colors_purchased[0]*2)}", state="normal"))
         
 def create_spinner(): 
     # Reels
@@ -411,6 +414,7 @@ money_label = ctk.CTkLabel(control_frame, width = 100, height=50, text=f"Money: 
 cost_to_spin_label = ctk.CTkLabel(control_frame, width=100, height=50, text="Cost per spin: $0")
 rounds_label = ctk.CTkLabel(control_frame, width = 100, height=50, text="Round 1")
 spins_remaining_label = ctk.CTkLabel(control_frame, width=100, height=50, text=f"Spins remaining: {remaining_spins[0]}")
+min_next_round_label = ctk.CTkLabel(control_frame, width=100, height=50, text="Minimum for next round: $0")
 rounds_label.pack(side="top", anchor="nw")
 spins_remaining_label.pack(side="top", anchor="nw", padx=25)
 spin_button = ctk.CTkButton(control_frame, text="Spin", command=spin_button_click)
@@ -460,7 +464,6 @@ game_over_font = ctk.CTkFont(family="Arial", size=100, weight="bold")
 game_over_label = ctk.CTkLabel(win, text="You Lost :(", font=game_over_font, text_color="red")
 
 # Known bug: money doesn't subtract until you press add/remove a color button twice, causing issues if you press it once with enough money and don't have enough money on the second press
-# Scaling with prices (constant price is too op)
 # -> Can buy perma free spins per round to a max of 5(?) out of total 10 spins
 # -> Maybe also increase value of line pay (rn its $10 can upgrade to $20+)
 
