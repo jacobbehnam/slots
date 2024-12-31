@@ -9,7 +9,7 @@ win.title("Gamba")
 win.geometry("1000x1000")
 
 #Variables
-SF = 4
+SF = 4 # Scale factor -- don't touch will remove later
 EXTRA_SPINS = 6 # Change to increase/decrease displacement of reel before stopping
 MOVE_AMOUNT = (800 + 100*EXTRA_SPINS)*SF
 chosenColorIndex = []
@@ -20,9 +20,11 @@ mults = [[1,1,1],
          ]
 mult_labels = {}
 probability_labels = {}
-money = [100] # In dollars
+money = [1000] # In dollars
 remaining_spins = [1]
 current_round = [1]
+colors_purchased = [0]
+colors_removed = [0]
 
 def ease_in_out_derivative(t):
     # Derivative of ease_in_out function t^2(3-2t)
@@ -174,7 +176,7 @@ def update_probabilities():
         label.configure(text=f"{color} \n {num_colors/len(colors)*100:.1f}%")
 
 def color_remove_click():
-    if money[0] >= 50:
+    if money[0] >= (49 + 5**colors_removed[0]):
         if color_remove_button.cget("text") != "Remove":
             continue_button.configure(state="disabled")
             color_remove_options.pack(side="bottom", pady=5)
@@ -183,7 +185,8 @@ def color_remove_click():
             color_remove_button.configure(text="Select Color!", state="disabled")
             win.after(1000, lambda: color_remove_button.configure(text="Remove", state="normal"))
         else:
-            money[0] -= 50
+            money[0] -= (49 + 5**colors_removed[0])
+            colors_removed[0] += 1
             money_label.configure(text=f"Money: ${money[0]}")
             selected_color = color_remove_options.get()
             colors.remove(selected_color)
@@ -191,15 +194,15 @@ def color_remove_click():
             color_remove_options.configure(values = [color for color in colors])
             color_remove_options.set("Select a Color")
             color_remove_options.pack_forget()
-            color_remove_button.configure(text="Remove a Color")
+            color_remove_button.configure(text=f"Remove a Color \n ${49 + 5**colors_removed[0]}")
             continue_button.configure(state="normal")
             print(colors)
     else:
         color_remove_button.configure(text="Not enough money!", state="disabled")
-        win.after(1000, lambda: color_remove_button.configure(text="Remove a Color \n $50", state="normal"))
+        win.after(1000, lambda: color_remove_button.configure(text=f"Remove a Color \n ${49 + 5**colors_removed[0]}", state="normal"))
 
 def color_add_click():
-    if money[0] >= 15:
+    if money[0] >= (14 + 5**colors_purchased[0]):
         if color_add_button.cget("text") != "Add":
             continue_button.configure(state="disabled")
             color_add_options.pack(side="bottom", pady=5)
@@ -208,19 +211,20 @@ def color_add_click():
             color_add_button.configure(text="Select Color!", state="disabled")
             win.after(1000, lambda: color_add_button.configure(text="Add", state="normal"))
         else:
-            money[0] -= 15
+            money[0] -= (14 + 5**colors_purchased[0])
+            colors_purchased[0] += 1
             money_label.configure(text=f"Money: ${money[0]}")
             selected_color = color_add_options.get()
             colors.append(selected_color)
             update_probabilities()
             color_add_options.set("Select a Color!")
             color_add_options.pack_forget()
-            color_add_button.configure(text="Add a Color \n $15")
+            color_add_button.configure(text=f"Add a Color \n ${14 + 5**colors_purchased[0]}")
             continue_button.configure(state="normal")
             print(colors)
     else:
         color_add_button.configure(text="Not enough money!", state="disabled")
-        win.after(1000, lambda: color_add_button.configure(text="Add a Color \n $15", state="normal"))
+        win.after(1000, lambda: color_add_button.configure(text=f"Add a Color \n ${14 + 5**colors_purchased[0]}", state="normal"))
         
 def create_spinner(): 
     # Reels
