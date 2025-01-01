@@ -2,7 +2,7 @@ import tkinter as tk
 import customtkinter as ctk
 import random
 import time
-from PIL import Image, ImageTk
+from PIL import Image
 
 win = ctk.CTk()
 win.title("Gamba")
@@ -20,7 +20,7 @@ mults = [[1,1,1],
          ]
 mult_labels = {}
 probability_labels = {}
-money = [10] # In dollars
+money = [1000] # In dollars
 remaining_spins = [1]
 current_round = [1]
 colors_purchased = [0]
@@ -99,13 +99,17 @@ def calculate_paylines(chosen_colors):
 def spin_button_click():   
     spin_button.configure(state="disabled")
     chosen_colors = []
+    
+    # This determines what the final state of the spin will be. Can be edited to anything.
+    # Chosen colors is a 3 x 7 2D list. What will show up on the 3x3 spinner will be the middle elements
+    # Ex. if one column is ['red', 'yellow', 'blue', 'pink', 'red', 'blue', 'black'], the spinner will land on blue, pink, red, in that order in that column.
     for j in range(3):
         column = []
         for i in range(7):
             #column.append(colors[2])
             column.append(colors[random.randint(0,len(colors)-1)])
         chosen_colors.append(column)
-        
+    
     start_time = time.perf_counter()
     money[0] -= ((current_round[0]-1)**2)/2 # Price per spin
     money_label.configure(text=f"Money: ${money[0]}")
@@ -260,7 +264,7 @@ def create_spin_map():
     spin_column = []
     for i in range(3):
         for j in range(7):
-            spin_column.append(((j+1)+(i*7), colors[j]))
+            spin_column.append(((j+1)+(i*7), colors[j])) # Tuple of the rectangle's id (needed to configure the rectangle) and its color
         spin_map.append(spin_column)
         spin_column = []
     print(spin_map)
@@ -268,30 +272,33 @@ def create_spin_map():
     
 def update_spin_map(spinning_reels, chosen_colors, count):
     spinning_reels = len(spinning_reels) // 7 # Will give a value of 3 2 or 1 depending on how many reels are still spinning
-    count -= EXTRA_SPINS
+    NUM_COLORS = 3
+    spinning_column = NUM_COLORS - spinning_reels
+    count -= EXTRA_SPINS # Once count is >=0, that means we are on the last spin for the current column -> must match colors with the predetermined ones rather than randomizing
     distance_travelled = count*100*SF
     
-    if distance_travelled >= 0: # If on last spin, start changing the colors of stopping reel to what they should be
-        last_rectangle = spin_map[3-spinning_reels].pop()
-        random_color = chosen_colors[3-spinning_reels][6-count]
-        canvas.itemconfig(spin_map[3-spinning_reels][-1][0], fill=random_color)
-        spin_map[3-spinning_reels][-1] = (spin_map[3-spinning_reels][-1][0], random_color)
-        spin_map[3-spinning_reels].insert(0, last_rectangle)
-        # Randomly change the colors for every reel that's still spinning
-        for column in range(2, 3-spinning_reels, -1):
-            last_rectangle = spin_map[column].pop()
-            random_color = colors[random.randint(0,len(colors)-1)]
-            canvas.itemconfig(spin_map[column][-1][0], fill=random_color)
-            spin_map[column][-1] = (spin_map[column][-1][0], random_color)
-            spin_map[column].insert(0, last_rectangle)
-    else: # Otherwise, randomly select colors for every spinning reel
-        for column in range(2, 2-spinning_reels, -1):
-            last_rectangle = spin_map[column].pop()
-            random_color = colors[random.randint(0,len(colors)-1)]
-            canvas.itemconfig(spin_map[column][-1][0], fill=random_color)
-            spin_map[column][-1] = (spin_map[column][-1][0], random_color)
-            spin_map[column].insert(0, last_rectangle)
-            
+    if distance_travelled >= 0: # If on last spin, start changing the colors of spinning column to what they should be
+        # We do this by deleting the last rectangle in the currently spinning column off the spin map
+        last_rectangle = spin_map[spinning_column].pop()
+        # Then changing the color of the first rectangle (which is off-screen) in the currently spinning column to match the chosen colors list back to front
+        new_color = chosen_colors[spinning_column][6-count] 
+        canvas.itemconfig(spin_map[spinning_column][-1][0], fill=new_color)
+        # And finally refreshing the spin map to be accurate for what is displayed
+        spin_map[spinning_column][-1] = (spin_map[spinning_column][-1][0], new_color)
+        spin_map[spinning_column].insert(0, last_rectangle)
+        # After repeating this for all the rectangles on the last spin, the color of the rectangles will match the predetermined colors
+        
+        # This is so the colors aren't randomized for the currently spinning column
+        spinning_column += 1
+
+    # Randomly change the colors for every column that isn't the spinning column
+    for column in range(2, spinning_column - 1, -1):
+        last_rectangle = spin_map[column].pop()
+        random_color = colors[random.randint(0,len(colors)-1)]
+        canvas.itemconfig(spin_map[column][-1][0], fill=random_color)
+        spin_map[column][-1] = (spin_map[column][-1][0], random_color)
+        spin_map[column].insert(0, last_rectangle)
+    
     return spin_map
 
 def restart_game():
@@ -333,14 +340,14 @@ def game_over(start_time, last_time, x=-600):
     ease_velocity = ease_in_out_derivative(elapsed) * (wwidth / 2.5)
     move_amount = (ease_velocity*dt)/1.5
     
-    game_over_label.place(x=x+move_amount, y=wheight//4)
+    game_over_label.place(x=x+move_amount, y=wheight//4) # I honestly don't know how to center this ... it should be the window height /2 but that doesn't work?? might be a problem with tkinter
     
     if elapsed < 1:
         win.after(10, game_over, start_time, current_time, x+move_amount)
 
 def spin(chosen_colors, start_time, last_time, reel = 1, count = 0, total_moved = 0): 
-    deltaT = 4
-    DURATION = 0.05 * (reel-3) * (reel-3) + 1
+    deltaT = 4 # (in milliseconds) Time between spin recursive function calls
+    duration_of_spin = 0.05 * (reel-3) * (reel-3) + 1 # (in seconds) -> speeds up reel by reel
     
     # Puts all the currently spinning reels (determined by the reel parameter) in a list
     reels = [canvas.find_withtag("reel1"), canvas.find_withtag("reel2"), canvas.find_withtag("reel3")]
@@ -348,14 +355,17 @@ def spin(chosen_colors, start_time, last_time, reel = 1, count = 0, total_moved 
     for i in range(4 - reel):
         spinning_reels += reels[2-i]
     
+    # This is to figure out how much to move the rectangles such that it animated in a non-linear way
+    # We start by finding dt which depends on how fast the spin function is called (ideally dt is infinitesimal)
+    # Then we find the velocity of the rectangle and integrate that velocity with respect to time
     current_time = time.perf_counter()
-    elapsed = (current_time-start_time)/DURATION # (duration)
+    elapsed = (current_time-start_time)/duration_of_spin
     dt = current_time - last_time
     if elapsed > 1:
         total_moved = 100*SF
         elapsed = 1
     ease_velocity = ease_in_out_derivative(elapsed) * MOVE_AMOUNT
-    move_amount = (ease_velocity*dt)/DURATION
+    move_amount = (ease_velocity*dt)/duration_of_spin
     
     # Moves all rectangles in spinning_reels. Moves rectangles back up to the top if reaching the edge of the canvas
     for rectangle in spinning_reels:
@@ -367,11 +377,8 @@ def spin(chosen_colors, start_time, last_time, reel = 1, count = 0, total_moved 
     total_moved += move_amount
     if total_moved >= 100*SF: # The width of a rectangle
         update_spin_map(spinning_reels, chosen_colors, count)
-        # We check if each column matches chosen_colors one by one depending on the reel parameter
-        current_column = []
-        for i in spin_map[reel - 1]:
-            current_column.append(i[1])
-        if count != 7+EXTRA_SPINS:
+            
+        if count != 7+EXTRA_SPINS: # Keep recursively calling the spin function until the reel has spun at least once (7 rectangles) plus some additional rectangles specified with the EXTRA_SPINS variable
             win.after(deltaT, spin, chosen_colors, start_time, current_time, reel, count + 1)
         else:
             for rectangle in reels[reel - 1]: # Nudges all rectangles in current reel to exact position
