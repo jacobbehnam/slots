@@ -1,4 +1,6 @@
 import tkinter as tk
+from venv import create
+
 import customtkinter as ctk
 import random
 import time
@@ -233,6 +235,14 @@ def color_add_click():
         color_add_button.configure(text="Not enough money!", state="disabled")
         win.after(1000, lambda: color_add_button.configure(text=f"Add a Color \n ${14 + 5**(colors_purchased[0]*2)}", state="normal"))
         
+def hideshow_tutorial():
+    if tutorial_hideshow.cget("text") == "Hide Tutorial":
+        tutorial_text.pack_forget()
+        tutorial_hideshow.configure(text="Show Tutorial")
+    elif tutorial_hideshow.cget("text") == "Show Tutorial":
+        tutorial_text.pack()
+        tutorial_hideshow.configure(text="Hide Tutorial")
+    
 def create_spinner(): 
     # Reels
     color_heights = (600/(len(colors)-1))*SF
@@ -258,7 +268,6 @@ def create_start_screen():
     subtitle_text.pack()
     start_button.pack(pady=40)
     
-
 def create_spin_map():
     spin_map = []
     spin_column = []
@@ -441,6 +450,19 @@ color_remove_options.set("Select a Color")
 color_add_button = ctk.CTkButton(color_add_frame, width=100, height=50, text="Add a Color \n $15", command=color_add_click)
 color_add_options = ctk.CTkComboBox(color_add_frame, width=100, height=25, values=["purple", "green", "pink", "yellow", "red", "blue", "black"], state="readonly")
 color_add_options.set("Select a Color")
+tutorial_frame = ctk.CTkFrame(control_frame)
+tutorial_text = ctk.CTkLabel(tutorial_frame, text="How to Play: \n "
+                                                  "The goal is to last as many rounds as possible. \n"
+                                                  "You spend money on spins that cost more and more each round. \n"
+                                                  "Here are the paylines (ADD HERE) \n"
+                                                  "After enough spins, you will move on to the next round. \n"
+                                                  "You get a payout for surviving each round. \n"
+                                                  "Prepare for the next round by purchasing upgrades in the shop. \n"
+                                                  "You can only buy upgrades in between rounds. \n"
+                                                  "The game ends if you cannot afford another spin. \n"
+                                                  "Good luck!")
+# add paylines info as an image
+tutorial_hideshow = ctk.CTkButton(tutorial_frame, text="Hide Tutorial", command=hideshow_tutorial)
 
 money_label.pack()
 cost_to_spin_label.pack()
@@ -459,6 +481,9 @@ color_remove_frame.pack(side="left", padx=10)
 color_remove_button.pack(padx=10)
 color_add_frame.pack(side="left", padx=10)
 color_add_button.pack(padx=10)
+tutorial_frame.pack(fill="both", expand=True)
+tutorial_hideshow.pack()
+hideshow_tutorial()
 probability_labels_frame.pack(side="bottom", fill="x", pady=10)
 
 for color in colors:
