@@ -239,9 +239,9 @@ def hideshow_tutorial():
     if tutorial_hideshow.cget("text") == "Hide Tutorial":
         tutorial_text.pack_forget()
         tutorial_hideshow.configure(text="Show Tutorial")
-        #ctk.CTkFrame(game_frame, width=800, height=600, fg_color="white").place(relx=0.5, rely=0.5, anchor="center")
     elif tutorial_hideshow.cget("text") == "Show Tutorial":
         tutorial_text.pack()
+        payline_info_frame.place(relx=0.5, rely=0.5, anchor="center")
         tutorial_hideshow.configure(text="Hide Tutorial")
     
 def create_spinner(): 
@@ -491,6 +491,15 @@ for color in colors:
     probability_labels[f"{color}"].pack(side="left", fill="x", expand=True)
 
 print(probability_labels)
+
+payline_info_frame = ctk.CTkFrame(game_frame, width=800, height=600)
+payline_info_image = Image.open("paylines.png")
+payline_info = ctk.CTkImage(payline_info_image, size=(800, 600))
+payline_info_label = ctk.CTkLabel(payline_info_frame, image=payline_info, text="")
+payline_info_frame.place(relx=0.5, rely=0.5, anchor="center")
+payline_info_label.pack()
+payline_info_close = ctk.CTkButton(payline_info_frame, width=50, height=50, text="X", fg_color="red", command=lambda: payline_info_frame.place_forget())
+payline_info_close.place(relx=1,rely=0, anchor="ne")
 
 game_over_font = ctk.CTkFont(family="Arial", size=100, weight="bold")
 game_over_label = ctk.CTkLabel(win, text="You Lost :(", font=game_over_font, text_color="red")
