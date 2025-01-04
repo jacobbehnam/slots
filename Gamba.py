@@ -22,7 +22,7 @@ mults = [[1,1,1],
          ]
 mult_labels = {}
 probability_labels = {}
-money = [1000] # In dollars
+money = [1] # In dollars
 remaining_spins = [1]
 current_round = [1]
 colors_purchased = [0]
@@ -61,7 +61,7 @@ def animate_paylines():
             spin_button.configure(state="normal")
             if remaining_spins[0] == 0:
                 bonus_payout = ctk.CTkLabel(canvas, text=f"Round \n Complete \n Bonus: \n ${current_round[0]*5}", font=("Arial", 100, "bold"))
-                bonus_payout.place(x=55, y=45)
+                bonus_payout.place(relx=0.5, rely=0.5, anchor="center")
                 money[0] += current_round[0]*5
                 money_label.configure(text=f"Money: ${money[0]}")
                 win.after(2000, lambda: bonus_payout.destroy())
@@ -239,6 +239,7 @@ def hideshow_tutorial():
     if tutorial_hideshow.cget("text") == "Hide Tutorial":
         tutorial_text.pack_forget()
         tutorial_hideshow.configure(text="Show Tutorial")
+        #ctk.CTkFrame(game_frame, width=800, height=600, fg_color="white").place(relx=0.5, rely=0.5, anchor="center")
     elif tutorial_hideshow.cget("text") == "Show Tutorial":
         tutorial_text.pack()
         tutorial_hideshow.configure(text="Hide Tutorial")
@@ -337,19 +338,18 @@ def restart_game():
     mult_labels.clear()
     update_probabilities()
 
-def game_over(start_time, last_time, x=-600):
-    wheight, wwidth = win.winfo_height(), win.winfo_width()
+def game_over(start_time, last_time, x=-0.5):
     current_time = time.perf_counter()
     elapsed = (current_time-start_time)/1.5
     dt = current_time - last_time
     if elapsed > 1:
         elapsed = 1
         win.after(500, restart_game)
-        win.after(500, lambda: game_over_label.place(x=-600, y=wheight//4))
-    ease_velocity = ease_in_out_derivative(elapsed) * (wwidth / 2.5)
+        win.after(500, lambda: game_over_label.place(relx=-0.5, rely=0.5, anchor="center"))
+    ease_velocity = ease_in_out_derivative(elapsed)
     move_amount = (ease_velocity*dt)/1.5
     
-    game_over_label.place(x=x+move_amount, y=wheight//4) # I honestly don't know how to center this ... it should be the window height /2 but that doesn't work?? might be a problem with tkinter
+    game_over_label.place(relx=x+move_amount, rely=0.5, anchor="center")
     
     if elapsed < 1:
         win.after(10, game_over, start_time, current_time, x+move_amount)
