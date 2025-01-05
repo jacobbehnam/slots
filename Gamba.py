@@ -37,8 +37,8 @@ def start_button_click():
     game_frame.pack(expand=True, fill="both")
 
 def animate_paylines():
-    if money[0] <= (((current_round[0]-1)**2)/2):
-        game_over(time.perf_counter(), time.perf_counter())
+    if money[0] < (((current_round[0]-1)**2)/2):
+        game_over()
     else:
         paylines = canvas.find_withtag("payline")
         flashing_payline = canvas.find_withtag("flashing_payline")
@@ -94,7 +94,6 @@ def calculate_paylines(chosen_colors):
             canvas.create_line(150 * SF, ((payline[1][1] - 2) * 100 + 50) * SF, 250 * SF, ((payline[2][1] - 2) * 100 + 50) * SF, width=3, state="hidden", fill="grey", tags="payline")
             hits += 1
             mult = mults[0][payline[0][1]-2] * mults[1][payline[1][1]-2] * mults[2][payline[2][1]-2]
-            print(mult)
             line_pays += 10*mult
     if hits != 0:
         money[0] += line_pays*hits
@@ -118,7 +117,6 @@ def spin_button_click():
     money_label.configure(text=f"Money: ${money[0]}")
     spin(chosen_colors, start_time, start_time)
     calculate_paylines(chosen_colors)
-    print(chosen_colors)
     
 def continue_button_click():
     current_round[0] += 1
@@ -141,7 +139,6 @@ def mult_purchase(row_frames, row, column, purchased_mults):
         frame.destroy()
     new_mult = mults[column][row] + 1
     mults[column][row] = new_mult
-    print(mults)
     
     purchased_mults += 1
     continue_button.configure(state="normal")
@@ -207,7 +204,6 @@ def color_remove_click():
             color_remove_options.pack_forget()
             color_remove_button.configure(text=f"Remove a Color \n ${(49 + 5**(colors_removed[0]*2))}")
             continue_button.configure(state="normal")
-            print(colors)
     else:
         color_remove_button.configure(text="Not enough money!", state="disabled")
         win.after(1000, lambda: color_remove_button.configure(text=f"Remove a Color \n ${(49 + 5**(colors_removed[0]*2))}", state="normal"))
@@ -232,7 +228,6 @@ def color_add_click():
             color_add_options.pack_forget()
             color_add_button.configure(text=f"Add a Color \n ${14 + 5**(colors_purchased[0]*2)}")
             continue_button.configure(state="normal")
-            print(colors)
     else:
         color_add_button.configure(text="Not enough money!", state="disabled")
         win.after(1000, lambda: color_add_button.configure(text=f"Add a Color \n ${14 + 5**(colors_purchased[0]*2)}", state="normal"))
@@ -286,7 +281,6 @@ def create_spin_map():
             spin_column.append(((j+1)+(i*7), colors[j])) # Tuple of the rectangle's id (needed to configure the rectangle) and its color
         spin_map.append(spin_column)
         spin_column = []
-    print(spin_map)
     return spin_map
     
 def update_spin_map(spinning_reels, chosen_colors, count):
@@ -321,6 +315,8 @@ def update_spin_map(spinning_reels, chosen_colors, count):
     return spin_map
 
 def restart_game():
+    game_over_frame.place(relx=-0.5, rely=0.5, anchor="center")
+    game_over_frame.place_forget()
     game_frame.pack_forget()
     start_frame.pack(expand=True, fill="both")
     colors.clear()
@@ -333,6 +329,11 @@ def restart_game():
     money[0] = 10
     remaining_spins[0] = 1
     current_round[0] = 1
+    colors_purchased[0] = 0
+    colors_removed[0] = 0
+    buy_mult_button.configure(text="Buy Mult \n $5")
+    color_add_button.configure("Add a Color \n $15")
+    color_remove_button.configure("Remove a Color \n $50")
     money_label.configure(text=f"Money: ${money[0]}")
     spins_remaining_label.configure(text=f"Spins remaining: {remaining_spins[0]}")
     rounds_label.configure(text=f"Round {current_round[0]}")
@@ -342,26 +343,33 @@ def restart_game():
     continue_button.pack_forget()
     spin_button.configure(state="normal")
     spin_button.pack()
+    tutorial_hideshow.configure(state="normal")
+    payline_info_hideshow.configure(state="normal")
     for mult_label in mult_labels.values():
         mult_label[0].destroy()
     mult_labels.clear()
     update_probabilities()
 
-def game_over(start_time, last_time, x=-0.5):
+def animate_game_over(start_time, last_time, x=-0.5):
     current_time = time.perf_counter()
     elapsed = (current_time-start_time)/1.5
     dt = current_time - last_time
     if elapsed > 1:
         elapsed = 1
-        win.after(500, restart_game)
-        win.after(500, lambda: game_over_label.place(relx=-0.5, rely=0.5, anchor="center"))
+        game_over_button.configure(state="normal")
     ease_velocity = ease_in_out_derivative(elapsed)
     move_amount = (ease_velocity*dt)/1.5
     
-    game_over_label.place(relx=x+move_amount, rely=0.5, anchor="center")
+    game_over_frame.place(relx=x+move_amount, rely=0.5, anchor="center")
     
     if elapsed < 1:
-        win.after(10, game_over, start_time, current_time, x+move_amount)
+        win.after(10, animate_game_over, start_time, current_time, x+move_amount)
+
+def game_over():
+    game_over_rounds_survived.configure(text=f"Rounds Survived: {current_round[0]}")
+    tutorial_hideshow.configure(state="disabled")
+    payline_info_hideshow.configure(state="disabled")
+    animate_game_over(time.perf_counter(), time.perf_counter())
 
 def spin(chosen_colors, start_time, last_time, reel = 1, count = 0, total_moved = 0): 
     deltaT = 4 # (in milliseconds) Time between spin recursive function calls
@@ -502,8 +510,6 @@ for color in colors:
     probability_labels[f"{color}"] = ctk.CTkLabel(probability_labels_frame, text=f"{color} \n 14.3%", text_color=f"{color}")
     probability_labels[f"{color}"].pack(side="left", fill="x", expand=True)
 
-print(probability_labels)
-
 payline_info_frame = ctk.CTkFrame(game_frame, width=800, height=600)
 payline_info_image = Image.open("paylines.png")
 payline_info = ctk.CTkImage(payline_info_image, size=(800, 600))
@@ -513,9 +519,16 @@ payline_info_close = ctk.CTkButton(payline_info_frame, width=50, height=50, text
 payline_info_close.place(relx=1,rely=0, anchor="ne")
 
 game_over_font = ctk.CTkFont(family="Arial", size=100, weight="bold")
-game_over_label = ctk.CTkLabel(win, text="You Lost :(", font=game_over_font, text_color="red")
+game_over_frame = ctk.CTkFrame(win)
+game_over_label = ctk.CTkLabel(game_over_frame, text="GAME OVER", font=game_over_font, text_color="red")
+game_over_rounds_survived = ctk.CTkLabel(game_over_frame, text=f"Rounds Survived: {current_round[0]}", font=("Arial", 50))
+game_over_button = ctk.CTkButton(game_over_frame, text="Return to start screen", command=restart_game, state="disabled")
+game_over_label.pack(padx=2000) # It makes it look cooler (trust)
+game_over_rounds_survived.pack()
+game_over_button.pack(pady=10)
 
 # Known bug: money doesn't subtract until you press add/remove a color button twice, causing issues if you press it once with enough money and don't have enough money on the second press
+# Lots of boring bug fixing ill have to do with interacting with things when the game is over
 # -> Can buy perma free spins per round to a max of 5(?) out of total 10 spins
 # -> Maybe also increase value of line pay (rn its $10 can upgrade to $20+)
 
