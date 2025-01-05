@@ -37,7 +37,7 @@ def start_button_click():
     game_frame.pack(expand=True, fill="both")
 
 def animate_paylines():
-    if money[0] <= (((current_round[0]-2)**2)/2):
+    if money[0] <= (((current_round[0]-1)**2)/2):
         game_over(time.perf_counter(), time.perf_counter())
     else:
         paylines = canvas.find_withtag("payline")
@@ -67,6 +67,7 @@ def animate_paylines():
                 win.after(2000, lambda: bonus_payout.destroy())
                 win.after(2000, lambda: continue_button.configure(state="normal"))
                 spin_button.pack_forget()
+                tutorial_frame.pack_forget()
                 min_next_round_label.configure(text=f"Minimum for next round: ${10*((current_round[0])**2)/2}")
                 min_next_round_label.pack()
                 continue_button.pack(pady=20, padx=10)
@@ -129,6 +130,7 @@ def continue_button_click():
         shop_frame.pack_forget()
         min_next_round_label.pack_forget()
         spin_button.pack(pady=20, padx=10)
+        tutorial_frame.pack(fill="both", expand=True)
         cost_to_spin_label.configure(text=f"Cost per spin: ${((current_round[0]-1)**2)/2}")
         remaining_spins[0] = 10
         spins_remaining_label.configure(text=f"Spins remaining: {remaining_spins[0]}")
@@ -240,9 +242,16 @@ def hideshow_tutorial():
         tutorial_text.pack_forget()
         tutorial_hideshow.configure(text="Show Tutorial")
     elif tutorial_hideshow.cget("text") == "Show Tutorial":
-        tutorial_text.pack()
-        payline_info_frame.place(relx=0.5, rely=0.5, anchor="center")
+        tutorial_text.pack(pady=10)
         tutorial_hideshow.configure(text="Hide Tutorial")
+
+def show_paylines_info():
+    payline_info_hideshow.configure(state="disabled")
+    payline_info_frame.place(relx=0.5, rely=0.5, anchor="center")
+    
+def close_paylines_info():
+    payline_info_hideshow.configure(state="normal")
+    payline_info_frame.place_forget()
     
 def create_spinner(): 
     # Reels
@@ -450,19 +459,20 @@ color_remove_options.set("Select a Color")
 color_add_button = ctk.CTkButton(color_add_frame, width=100, height=50, text="Add a Color \n $15", command=color_add_click)
 color_add_options = ctk.CTkComboBox(color_add_frame, width=100, height=25, values=["purple", "green", "pink", "yellow", "red", "blue", "black"], state="readonly")
 color_add_options.set("Select a Color")
-tutorial_frame = ctk.CTkFrame(control_frame)
-tutorial_text = ctk.CTkLabel(tutorial_frame, text="How to Play: \n "
-                                                  "The goal is to last as many rounds as possible. \n"
-                                                  "You spend money on spins that cost more and more each round. \n"
-                                                  "Here are the paylines (ADD HERE) \n"
-                                                  "After enough spins, you will move on to the next round. \n"
-                                                  "You get a payout for surviving each round. \n"
-                                                  "Prepare for the next round by purchasing upgrades in the shop. \n"
-                                                  "You can only buy upgrades in between rounds. \n"
-                                                  "The game ends if you cannot afford another spin. \n"
+tutorial_frame = ctk.CTkFrame(control_frame, fg_color="transparent")
+tutorial_text = ctk.CTkLabel(tutorial_frame, wraplength=400, text="How to Play: \n\n "
+                                                  "The goal is to last as many rounds as possible. \n\n"
+                                                  "You spend money on spins that cost more and more each round. \n\n"
+                                                  "After enough spins, you will move on to the next round. \n\n"
+                                                  "You get a payout for surviving each round. \n\n"
+                                                  "Prepare for the next round by purchasing upgrades in the shop. \n\n"
+                                                  "You can only buy upgrades in between rounds. \n\n"
+                                                  "The percentages below are the chances of each color showing up. \n\n"                
+                                                  "The game ends if you cannot afford another spin. \n\n"
                                                   "Good luck!")
-# add paylines info as an image
-tutorial_hideshow = ctk.CTkButton(tutorial_frame, text="Hide Tutorial", command=hideshow_tutorial)
+help_buttons_frame = ctk.CTkFrame(tutorial_frame, fg_color="transparent")
+tutorial_hideshow = ctk.CTkButton(help_buttons_frame, text="Show Tutorial", command=hideshow_tutorial)
+payline_info_hideshow = ctk.CTkButton(help_buttons_frame, text="Show Paylines", command=show_paylines_info)
 
 money_label.pack()
 cost_to_spin_label.pack()
@@ -482,7 +492,9 @@ color_remove_button.pack(padx=10)
 color_add_frame.pack(side="left", padx=10)
 color_add_button.pack(padx=10)
 tutorial_frame.pack(fill="both", expand=True)
-tutorial_hideshow.pack()
+help_buttons_frame.pack(pady=20, fill="x", side="bottom")
+tutorial_hideshow.pack(padx=20, side="left", fill="x", expand=True)
+payline_info_hideshow.pack(padx=20, side="left", fill="x", expand=True)
 hideshow_tutorial()
 probability_labels_frame.pack(side="bottom", fill="x", pady=10)
 
@@ -496,9 +508,8 @@ payline_info_frame = ctk.CTkFrame(game_frame, width=800, height=600)
 payline_info_image = Image.open("paylines.png")
 payline_info = ctk.CTkImage(payline_info_image, size=(800, 600))
 payline_info_label = ctk.CTkLabel(payline_info_frame, image=payline_info, text="")
-payline_info_frame.place(relx=0.5, rely=0.5, anchor="center")
 payline_info_label.pack()
-payline_info_close = ctk.CTkButton(payline_info_frame, width=50, height=50, text="X", fg_color="red", command=lambda: payline_info_frame.place_forget())
+payline_info_close = ctk.CTkButton(payline_info_frame, width=50, height=50, text="X", fg_color="red", command=close_paylines_info)
 payline_info_close.place(relx=1,rely=0, anchor="ne")
 
 game_over_font = ctk.CTkFont(family="Arial", size=100, weight="bold")
