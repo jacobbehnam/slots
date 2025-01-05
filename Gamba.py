@@ -1,6 +1,4 @@
 import tkinter as tk
-from venv import create
-
 import customtkinter as ctk
 import random
 import time
@@ -36,10 +34,10 @@ def start_button_click():
     start_frame.pack_forget()
     game_frame.pack(expand=True, fill="both")
 
-def animate_paylines():
+def animate_paylines(paylines_animated=0):
     if money[0] < (((current_round[0]-1)**2)/2):
         game_over()
-    else:
+    else:       
         paylines = canvas.find_withtag("payline")
         flashing_payline = canvas.find_withtag("flashing_payline")
         
@@ -53,7 +51,7 @@ def animate_paylines():
                 paylines = canvas.find_withtag("payline")
                 line = paylines[0]
                 canvas.itemconfig(line, state="normal", tag="flashing_payline")
-            win.after(1000, animate_paylines)
+            win.after(750 - paylines_animated*50, animate_paylines, paylines_animated+1)
         else:
             money_label.configure(text=f"Money: ${money[0]}")
             remaining_spins[0] -= 1
@@ -90,8 +88,8 @@ def calculate_paylines(chosen_colors):
     # Checks how many paylines hit and draws the paylines as hidden (animated once spin() is finished)
     for name, payline in paylines.items():
         if chosen_colors[0][payline[0][1]] == chosen_colors[1][payline[1][1]] == chosen_colors[2][payline[2][1]]:
-            canvas.create_line(50*SF, ((payline[0][1]-2)*100+50)*SF, 150*SF, ((payline[1][1]-2)*100+50)*SF, width=3, state="hidden", fill="grey", tags="payline")
-            canvas.create_line(150 * SF, ((payline[1][1] - 2) * 100 + 50) * SF, 250 * SF, ((payline[2][1] - 2) * 100 + 50) * SF, width=3, state="hidden", fill="grey", tags="payline")
+            canvas.create_line(50*SF, ((payline[0][1]-2)*100+50)*SF, 150*SF, ((payline[1][1]-2)*100+50)*SF, width=7, state="hidden", fill="grey", tags="payline")
+            canvas.create_line(150 * SF, ((payline[1][1] - 2) * 100 + 50) * SF, 250 * SF, ((payline[2][1] - 2) * 100 + 50) * SF, width=7, state="hidden", fill="grey", tags="payline")
             hits += 1
             mult = mults[0][payline[0][1]-2] * mults[1][payline[1][1]-2] * mults[2][payline[2][1]-2]
             line_pays += 10*mult
@@ -121,7 +119,7 @@ def spin_button_click():
 def continue_button_click():
     current_round[0] += 1
     if money[0] < ((current_round[0]-1)**2)/2:
-        game_over(time.perf_counter(), time.perf_counter())
+        game_over()
     else:
         continue_button.configure(state="disabled")
         continue_button.pack_forget()
@@ -151,7 +149,7 @@ def mult_purchase(row_frames, row, column, purchased_mults):
     custom_font = ctk.CTkFont(family="Arial", size=20, weight="bold")
     label = ctk.CTkLabel(canvas, width=50 * SF, height=10 * SF, text=f"❌ {new_mult}", font=custom_font, fg_color="lightsteelblue2", text_color="white")
     mult_labels[(column,row)] = [label, new_mult] 
-    label.place(x=0 + column*50*SF, y=20 * SF + row*50*SF)
+    label.place(x=0 + column*50*SF, y=row*50*SF)
         
 def buy_mult_click():
     purchased_mults = 0
@@ -332,8 +330,8 @@ def restart_game():
     colors_purchased[0] = 0
     colors_removed[0] = 0
     buy_mult_button.configure(text="Buy Mult \n $5")
-    color_add_button.configure("Add a Color \n $15")
-    color_remove_button.configure("Remove a Color \n $50")
+    color_add_button.configure(text="Add a Color \n $15")
+    color_remove_button.configure(text="Remove a Color \n $50")
     money_label.configure(text=f"Money: ${money[0]}")
     spins_remaining_label.configure(text=f"Spins remaining: {remaining_spins[0]}")
     rounds_label.configure(text=f"Round {current_round[0]}")
