@@ -20,11 +20,12 @@ mults = [[1,1,1],
          ]
 mult_labels = {}
 probability_labels = {}
-money = [1] # In dollars
+money = [10] # In dollars
 remaining_spins = [1]
 current_round = [1]
 colors_purchased = [0]
 colors_removed = [0]
+purchased_mults = [0]
 
 def ease_in_out_derivative(t):
     # Derivative of ease_in_out function t^2(3-2t)
@@ -95,7 +96,22 @@ def calculate_paylines(chosen_colors):
             line_pays += 10*mult
     if hits != 0:
         money[0] += line_pays*hits
-    
+
+def bomb_hit(chosen_colors):
+    random_column = random.randint(0, 2)
+    random_row = random.randint(0, 2)
+    chosen_colors[random_column][random_row + 2] = "BOMB"
+    if mults[random_column][random_row] > 0:
+        mults[random_column][random_row] = 0
+        if (random_column, random_row) in mult_labels:
+            old_label = mult_labels[(random_column, random_row)][0]
+            old_label.destroy()
+        label = ctk.CTkLabel(canvas, width=50 * SF, height=10 * SF, text=f"❌ {0}",
+                             font=("Arial", 20, "bold"), fg_color="lightsteelblue2", text_color="white")
+        mult_labels[(random_column, random_row)] = [label, 0]
+        win.after(3500, lambda: label.place(x=0 + random_column * 50 * SF, y=random_row * 50 * SF)) # CHANGE
+    return chosen_colors
+
 def spin_button_click():   
     spin_button.configure(state="disabled")
     chosen_colors = []
@@ -109,6 +125,10 @@ def spin_button_click():
             #column.append(colors[2])
             column.append(colors[random.randint(0,len(colors)-1)])
         chosen_colors.append(column)
+    
+    is_bomb = random.random() >= 0.5 # 50% Chance
+    if is_bomb:
+        chosen_colors = bomb_hit(chosen_colors)
     
     start_time = time.perf_counter()
     money[0] -= ((current_round[0]-1)**2)/2 # Price per spin
@@ -132,34 +152,27 @@ def continue_button_click():
         spins_remaining_label.configure(text=f"Spins remaining: {remaining_spins[0]}")
         rounds_label.configure(text=f"Round {current_round[0]}")
 
-def mult_purchase(row_frames, row, column, purchased_mults):
+def mult_purchase(row_frames, row, column):
     for frame in row_frames:
         frame.destroy()
     new_mult = mults[column][row] + 1
     mults[column][row] = new_mult
     
-    purchased_mults += 1
+    purchased_mults[0] += 1
     continue_button.configure(state="normal")
-    buy_mult_button.configure(state="normal", text=f"Buy Mult \n ${4 + 2**purchased_mults}")
+    buy_mult_button.configure(state="normal", text=f"Buy Mult \n ${4 + 2**purchased_mults[0]}")
     
     if new_mult > 2:
         old_label = mult_labels[(column, row)][0]
         old_label.destroy()
     
-    custom_font = ctk.CTkFont(family="Arial", size=20, weight="bold")
-    label = ctk.CTkLabel(canvas, width=50 * SF, height=10 * SF, text=f"❌ {new_mult}", font=custom_font, fg_color="lightsteelblue2", text_color="white")
+    label = ctk.CTkLabel(canvas, width=50 * SF, height=10 * SF, text=f"❌ {new_mult}", font=("Arial", 20, "bold"), fg_color="lightsteelblue2", text_color="white")
     mult_labels[(column,row)] = [label, new_mult] 
     label.place(x=0 + column*50*SF, y=row*50*SF)
         
 def buy_mult_click():
-    purchased_mults = 0
-    for i in mults:
-        for j in i:
-            purchased_mults += j
-    purchased_mults -= 9
-    
-    if money[0] >= (4 + 2**purchased_mults):
-        money[0] -= (4 + 2**purchased_mults)
+    if money[0] >= (4 + 2**purchased_mults[0]):
+        money[0] -= (4 + 2**purchased_mults[0])
         money_label.configure(text=f"Money: ${money[0]}")
         continue_button.configure(state="disabled")
         buy_mult_button.configure(state="disabled")
@@ -170,11 +183,11 @@ def buy_mult_click():
             row_frame.pack_propagate(False)
             row_frame.pack()
             for j in range(3):
-                button = ctk.CTkButton(row_frame, width=50*SF, height=100*SF, command=lambda i=i, j=j: mult_purchase(row_frames, i, j, purchased_mults))
+                button = ctk.CTkButton(row_frame, width=50*SF, height=100*SF, command=lambda i=i, j=j: mult_purchase(row_frames, i, j))
                 button.pack(side="left", anchor="nw")
     else:
         buy_mult_button.configure(text="Not enough money!", state="disabled")
-        win.after(1000, lambda: buy_mult_button.configure(text=f"Buy Mult \n ${4+2**purchased_mults}", state="normal"))
+        win.after(1000, lambda: buy_mult_button.configure(text=f"Buy Mult \n ${4+2**purchased_mults[0]}", state="normal"))
 
 def update_probabilities():
     for color, label in probability_labels.items():
@@ -292,8 +305,11 @@ def update_spin_map(spinning_reels, chosen_colors, count):
         # We do this by deleting the last rectangle in the currently spinning column off the spin map
         last_rectangle = spin_map[spinning_column].pop()
         # Then changing the color of the first rectangle (which is off-screen) in the currently spinning column to match the chosen colors list back to front
-        new_color = chosen_colors[spinning_column][6-count] 
-        canvas.itemconfig(spin_map[spinning_column][-1][0], fill=new_color)
+        new_color = chosen_colors[spinning_column][6-count]
+        if new_color != "BOMB":
+            canvas.itemconfig(spin_map[spinning_column][-1][0], fill=new_color)
+        else:
+            canvas.itemconfig(spin_map[spinning_column][-1][0], fill="lightsteelblue2")
         # And finally refreshing the spin map to be accurate for what is displayed
         spin_map[spinning_column][-1] = (spin_map[spinning_column][-1][0], new_color)
         spin_map[spinning_column].insert(0, last_rectangle)
