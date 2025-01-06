@@ -98,19 +98,23 @@ def calculate_paylines(chosen_colors):
         money[0] += line_pays*hits
 
 def bomb_hit(chosen_colors):
-    random_column = random.randint(0, 2)
-    random_row = random.randint(0, 2)
-    chosen_colors[random_column][random_row + 2] = "BOMB"
-    if mults[random_column][random_row] > 0:
-        mults[random_column][random_row] = 0
-        if (random_column, random_row) in mult_labels:
-            old_label = mult_labels[(random_column, random_row)][0]
+    for i, column in enumerate(chosen_colors):
+        if "BOMB" in column:
+            bomb_column = i
+            bomb_row = column.index("BOMB") - 2
+            break
+    else:
+        return
+    
+    if mults[bomb_column][bomb_row] > 0:
+        mults[bomb_column][bomb_row] = 0
+        if (bomb_column, bomb_row) in mult_labels:
+            old_label = mult_labels[(bomb_column, bomb_row)][0]
             old_label.destroy()
         label = ctk.CTkLabel(canvas, width=50 * SF, height=10 * SF, text=f"❌ {0}",
                              font=("Arial", 20, "bold"), fg_color="lightsteelblue2", text_color="white")
-        mult_labels[(random_column, random_row)] = [label, 0]
-        win.after(3500, lambda: label.place(x=0 + random_column * 50 * SF, y=random_row * 50 * SF)) # CHANGE
-    return chosen_colors
+        mult_labels[(bomb_column, bomb_row)] = [label, 0]
+        label.place(x=0 + bomb_column * 50 * SF, y=bomb_row * 50 * SF)
 
 def spin_button_click():   
     spin_button.configure(state="disabled")
@@ -126,9 +130,11 @@ def spin_button_click():
             column.append(colors[random.randint(0,len(colors)-1)])
         chosen_colors.append(column)
     
-    is_bomb = random.random() >= 0.5 # 50% Chance
+    is_bomb = random.random() >= 0.9 # Change to change chance of hitting bomb
     if is_bomb:
-        chosen_colors = bomb_hit(chosen_colors)
+        random_column = random.randint(0, 2)
+        random_row = random.randint(0, 2)
+        chosen_colors[random_column][random_row + 2] = "BOMB"
     
     start_time = time.perf_counter()
     money[0] -= ((current_round[0]-1)**2)/2 # Price per spin
@@ -162,13 +168,14 @@ def mult_purchase(row_frames, row, column):
     continue_button.configure(state="normal")
     buy_mult_button.configure(state="normal", text=f"Buy Mult \n ${4 + 2**purchased_mults[0]}")
     
-    if new_mult > 2:
+    if new_mult > 2 or new_mult == 1:
         old_label = mult_labels[(column, row)][0]
         old_label.destroy()
     
-    label = ctk.CTkLabel(canvas, width=50 * SF, height=10 * SF, text=f"❌ {new_mult}", font=("Arial", 20, "bold"), fg_color="lightsteelblue2", text_color="white")
-    mult_labels[(column,row)] = [label, new_mult] 
-    label.place(x=0 + column*50*SF, y=row*50*SF)
+    if new_mult != 1:
+        label = ctk.CTkLabel(canvas, width=50 * SF, height=10 * SF, text=f"❌ {new_mult}", font=("Arial", 20, "bold"), fg_color="lightsteelblue2", text_color="white")
+        mult_labels[(column,row)] = [label, new_mult] 
+        label.place(x=0 + column*50*SF, y=row*50*SF)
         
 def buy_mult_click():
     if money[0] >= (4 + 2**purchased_mults[0]):
@@ -427,6 +434,7 @@ def spin(chosen_colors, start_time, last_time, reel = 1, count = 0, total_moved 
             if(reel < 3): # Continues spinning excluding the current column if not all reels finished spinning
                 win.after(deltaT, spin, chosen_colors, current_time, current_time, reel+1)
             else:
+                bomb_hit(chosen_colors) # Will change mult on square if bomb was hit
                 animate_paylines()
     else:
         win.after(deltaT, spin, chosen_colors, start_time, current_time, reel, count, total_moved)
