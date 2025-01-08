@@ -51,7 +51,18 @@ def animate_paylines(paylines_animated=0):
             for i in range(2):
                 paylines = canvas.find_withtag("payline")
                 line = paylines[0]
+                payline_value = float(canvas.gettags(line)[1])
                 canvas.itemconfig(line, state="normal", tag="flashing_payline")
+            
+            # This block of code gives the player a visual representation of how the paylines are paying out
+            # In calculate_paylines the formula was line_pays*hits so this is summing up all the lines pays and multiplying it by the total hits (paylines animated)
+            current_money_text = money_label.cget("text").rstrip(f") x {paylines_animated}")
+            if "(" in current_money_text:
+                money_label.configure(text=f"{current_money_text} + ${payline_value}) x {paylines_animated+1}")
+            else:
+                money_label.configure(text=f"{current_money_text} + (${payline_value}) x {paylines_animated+1}")
+            
+            # Recursively call this function until all paylines have been animated
             win.after(750 - paylines_animated*50, animate_paylines, paylines_animated+1)
         else:
             money_label.configure(text=f"Money: ${money[0]}")
@@ -61,10 +72,11 @@ def animate_paylines(paylines_animated=0):
             if remaining_spins[0] == 0:
                 bonus_payout = ctk.CTkLabel(canvas, text=f"Round \n Complete \n Bonus: \n ${current_round[0]*5}", font=("Arial", 100, "bold"))
                 bonus_payout.place(relx=0.5, rely=0.5, anchor="center")
+                money_label.configure(text=f"Money: ${money[0]} + ${current_round[0] * 5}")
                 money[0] += current_round[0]*5
-                money_label.configure(text=f"Money: ${money[0]}")
                 win.after(2000, lambda: bonus_payout.destroy())
                 win.after(2000, lambda: continue_button.configure(state="normal"))
+                win.after(2000, lambda: money_label.configure(text=f"Money: ${money[0]}"))
                 spin_button.pack_forget()
                 tutorial_frame.pack_forget()
                 min_next_round_label.configure(text=f"Minimum for next round: ${10*((current_round[0])**2)/2}")
@@ -89,11 +101,11 @@ def calculate_paylines(chosen_colors):
     # Checks how many paylines hit and draws the paylines as hidden (animated once spin() is finished)
     for name, payline in paylines.items():
         if chosen_colors[0][payline[0][1]] == chosen_colors[1][payline[1][1]] == chosen_colors[2][payline[2][1]]:
-            canvas.create_line(50*SF, ((payline[0][1]-2)*100+50)*SF, 150*SF, ((payline[1][1]-2)*100+50)*SF, width=7, state="hidden", fill="grey", tags="payline")
-            canvas.create_line(150 * SF, ((payline[1][1] - 2) * 100 + 50) * SF, 250 * SF, ((payline[2][1] - 2) * 100 + 50) * SF, width=7, state="hidden", fill="grey", tags="payline")
             hits += 1
             mult = mults[0][payline[0][1]-2] * mults[1][payline[1][1]-2] * mults[2][payline[2][1]-2]
             line_pays += 10*mult
+            canvas.create_line(50*SF, ((payline[0][1]-2)*100+50)*SF, 150*SF, ((payline[1][1]-2)*100+50)*SF, width=7, state="hidden", fill="grey", tags=("payline",f"{10*mult}"))
+            canvas.create_line(150 * SF, ((payline[1][1] - 2) * 100 + 50) * SF, 250 * SF, ((payline[2][1] - 2) * 100 + 50) * SF, width=7, state="hidden", fill="grey", tags=("payline",f"{10*mult}"))
     if hits != 0:
         money[0] += line_pays*hits
 
@@ -139,8 +151,8 @@ def spin_button_click():
     start_time = time.perf_counter()
     money[0] -= ((current_round[0]-1)**2)/2 # Price per spin
     money_label.configure(text=f"Money: ${money[0]}")
-    spin(chosen_colors, start_time, start_time)
     calculate_paylines(chosen_colors)
+    spin(chosen_colors, start_time, start_time)
     
 def continue_button_click():
     current_round[0] += 1
@@ -352,6 +364,7 @@ def restart_game():
     current_round[0] = 1
     colors_purchased[0] = 0
     colors_removed[0] = 0
+    purchased_mults[0] = 0
     buy_mult_button.configure(text="Buy Mult \n $5")
     color_add_button.configure(text="Add a Color \n $15")
     color_remove_button.configure(text="Remove a Color \n $50")
@@ -434,6 +447,7 @@ def spin(chosen_colors, start_time, last_time, reel = 1, count = 0, total_moved 
             if(reel < 3): # Continues spinning excluding the current column if not all reels finished spinning
                 win.after(deltaT, spin, chosen_colors, current_time, current_time, reel+1)
             else:
+                print(spin_map, chosen_colors)
                 bomb_hit(chosen_colors) # Will change mult on square if bomb was hit
                 animate_paylines()
     else:
@@ -465,7 +479,7 @@ create_spinner()
 spin_map = create_spin_map()
 
 # Right UI
-money_label = ctk.CTkLabel(control_frame, width = 100, height=50, text=f"Money: ${money[0]}")
+money_label = ctk.CTkLabel(control_frame, width = 100, height=50, text=f"Money: ${money[0]}", wraplength=200)
 cost_to_spin_label = ctk.CTkLabel(control_frame, width=100, height=50, text="Cost per spin: $0")
 rounds_label = ctk.CTkLabel(control_frame, width = 100, height=50, text="Round 1")
 spins_remaining_label = ctk.CTkLabel(control_frame, width=100, height=50, text=f"Spins remaining: {remaining_spins[0]}")
