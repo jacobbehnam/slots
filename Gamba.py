@@ -196,6 +196,8 @@ def mult_purchase(row_frames, row, column):
         label = ctk.CTkLabel(canvas, width=50 * SF, height=10 * SF, text=f"❌ {new_mult}", font=("Arial", 20, "bold"), fg_color="lightsteelblue2", text_color="white")
         mult_labels[(column,row)] = [label, new_mult] 
         label.place(x=0 + column*50*SF, y=row*50*SF)
+    elif new_mult == 1:
+        mult_labels.pop((column, row))
         
 def buy_mult_click():
     if money[0] >= (4 + 2**purchased_mults[0]):
@@ -576,7 +578,6 @@ scaled_bomb_image = ctk.CTkImage(bomb_image, size=(50*SF,45*SF))
 
 # Known bug: money doesn't subtract until you press add/remove a color button twice, causing issues if you press it once with enough money and don't have enough money on the second press
 # Lots of boring bug fixing ill have to do with interacting with things when the game is over
-# (cannot reproduce) got an error with the existence of a mult label in bomb_hit (passed the if check but caused an error on .lower)
 # -> Can buy perma free spins per round to a max of 5(?) out of total 10 spins
 # -> Maybe also increase value of line pay (rn its $10 can upgrade to $20+)
 
