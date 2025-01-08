@@ -2,7 +2,7 @@ import tkinter as tk
 import customtkinter as ctk
 import random
 import time
-from PIL import Image
+from PIL import Image, ImageTk
 
 win = ctk.CTk()
 win.title("Gamba")
@@ -117,6 +117,13 @@ def bomb_hit(chosen_colors):
             break
     else:
         return
+
+    bomb_rectangle = ctk.CTkLabel(canvas, text="", image=scaled_bomb_image, fg_color="lightsteelblue2")
+    print((bomb_column, bomb_row), mult_labels)
+    if (bomb_column, bomb_row) in mult_labels: # Ensures the bomb is always below the mult label on that square (if it exists)
+        bomb_rectangle.lower(mult_labels[(bomb_column, bomb_row)][0])
+    bomb_rectangle.place(relx=bomb_column/3, rely=bomb_row/3, y=5*SF)
+    win.after(500, lambda: bomb_rectangle.destroy())
     
     if mults[bomb_column][bomb_row] > 0:
         mults[bomb_column][bomb_row] = 0
@@ -142,11 +149,12 @@ def spin_button_click():
             column.append(colors[random.randint(0,len(colors)-1)])
         chosen_colors.append(column)
     
-    is_bomb = random.random() >= 0.9 # Change to change chance of hitting bomb
+    is_bomb = random.random() >= 0.5 # Change to change chance of hitting bomb
     if is_bomb:
         random_column = random.randint(0, 2)
         random_row = random.randint(0, 2)
         chosen_colors[random_column][random_row + 2] = "BOMB"
+        print("bomb")
     
     start_time = time.perf_counter()
     money[0] -= ((current_round[0]-1)**2)/2 # Price per spin
@@ -563,8 +571,12 @@ game_over_label.pack(padx=2000) # It makes it look cooler (trust)
 game_over_rounds_survived.pack()
 game_over_button.pack(pady=10)
 
+bomb_image = Image.open("bomb.png")
+scaled_bomb_image = ctk.CTkImage(bomb_image, size=(50*SF,45*SF))
+
 # Known bug: money doesn't subtract until you press add/remove a color button twice, causing issues if you press it once with enough money and don't have enough money on the second press
 # Lots of boring bug fixing ill have to do with interacting with things when the game is over
+# (cannot reproduce) got an error with the existence of a mult label in bomb_hit (passed the if check but caused an error on .lower)
 # -> Can buy perma free spins per round to a max of 5(?) out of total 10 spins
 # -> Maybe also increase value of line pay (rn its $10 can upgrade to $20+)
 
