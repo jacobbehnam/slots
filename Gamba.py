@@ -20,12 +20,13 @@ mults = [[1,1,1],
          ]
 mult_labels = {}
 probability_labels = {}
-money = [1000] # In dollars
+money = [10] # In dollars
 remaining_spins = [1]
 current_round = [1]
 colors_purchased = [0]
 colors_removed = [0]
 purchased_mults = [0]
+bomb_hit_chance = [0]
 
 def ease_in_out_derivative(t):
     # Derivative of ease_in_out function t^2(3-2t)
@@ -35,8 +36,26 @@ def start_button_click():
     start_frame.pack_forget()
     game_frame.pack(expand=True, fill="both")
 
+def round_complete():
+    bonus_payout = ctk.CTkLabel(canvas, text=f"Round \n Complete \n Bonus: \n ${current_round[0] * 5}",
+                                font=("Arial", 100, "bold"))
+    bonus_payout.place(relx=0.5, rely=0.5, anchor="center")
+    money_label.configure(text=f"Money: ${money[0]} + ${current_round[0] * 5}")
+    bomb_hit_chance[0] = min(bomb_hit_chance[0]+0.04, 1) # Adds 4% Chance to a max of 100%
+    bomb_hit_chance_label.configure(text=f"Next Round Bomb Hit Chance: {int(bomb_hit_chance[0]*100)}%")
+    money[0] += current_round[0] * 5
+    win.after(2000, lambda: bonus_payout.destroy())
+    win.after(2000, lambda: continue_button.configure(state="normal"))
+    win.after(2000, lambda: money_label.configure(text=f"Money: ${money[0]}"))
+    spin_button.pack_forget()
+    tutorial_frame.pack_forget()
+    min_next_round_label.configure(text=f"Minimum for next round: ${((2**(current_round[0]))-1)*10}")
+    min_next_round_label.pack()
+    continue_button.pack(pady=20, padx=10)
+    shop_frame.pack(fill="both", pady=10)
+
 def animate_paylines(paylines_animated=0):
-    if money[0] < (((current_round[0]-1)**2)/2):
+    if money[0] < ((2**(current_round[0]-1))-1):
         game_over()
     else:       
         paylines = canvas.find_withtag("payline")
@@ -70,19 +89,7 @@ def animate_paylines(paylines_animated=0):
             spins_remaining_label.configure(text=f"Spins remaining: {remaining_spins[0]}")
             spin_button.configure(state="normal")
             if remaining_spins[0] == 0:
-                bonus_payout = ctk.CTkLabel(canvas, text=f"Round \n Complete \n Bonus: \n ${current_round[0]*5}", font=("Arial", 100, "bold"))
-                bonus_payout.place(relx=0.5, rely=0.5, anchor="center")
-                money_label.configure(text=f"Money: ${money[0]} + ${current_round[0] * 5}")
-                money[0] += current_round[0]*5
-                win.after(2000, lambda: bonus_payout.destroy())
-                win.after(2000, lambda: continue_button.configure(state="normal"))
-                win.after(2000, lambda: money_label.configure(text=f"Money: ${money[0]}"))
-                spin_button.pack_forget()
-                tutorial_frame.pack_forget()
-                min_next_round_label.configure(text=f"Minimum for next round: ${10*((current_round[0])**2)/2}")
-                min_next_round_label.pack()
-                continue_button.pack(pady=20, padx=10)
-                shop_frame.pack(fill="both", pady=10)
+                round_complete()
 
 def calculate_paylines(chosen_colors):
     paylines = {
@@ -149,21 +156,21 @@ def spin_button_click():
             column.append(colors[random.randint(0,len(colors)-1)])
         chosen_colors.append(column)
     
-    is_bomb = random.random() >= 0.5 # Change to change chance of hitting bomb
+    is_bomb = random.random() >= 1-bomb_hit_chance[0] # Change to change chance of hitting bomb
     if is_bomb:
         random_column = random.randint(0, 2)
         random_row = random.randint(0, 2)
         chosen_colors[random_column][random_row + 2] = "BOMB"
     
     start_time = time.perf_counter()
-    money[0] -= ((current_round[0]-1)**2)/2 # Price per spin
+    money[0] -= (2**(current_round[0]-1))-1 # Price per spin
     money_label.configure(text=f"Money: ${money[0]}")
     calculate_paylines(chosen_colors)
     spin(chosen_colors, start_time, start_time)
     
 def continue_button_click():
     current_round[0] += 1
-    if money[0] < ((current_round[0]-1)**2)/2:
+    if money[0] < ((2**(current_round[0]-1))-1):
         game_over()
     else:
         continue_button.configure(state="disabled")
@@ -172,10 +179,11 @@ def continue_button_click():
         min_next_round_label.pack_forget()
         spin_button.pack(pady=20, padx=10)
         tutorial_frame.pack(fill="both", expand=True)
-        cost_to_spin_label.configure(text=f"Cost per spin: ${((current_round[0]-1)**2)/2}")
+        cost_to_spin_label.configure(text=f"Cost per spin: ${(2**(current_round[0]-1))-1}")
         remaining_spins[0] = 10
         spins_remaining_label.configure(text=f"Spins remaining: {remaining_spins[0]}")
         rounds_label.configure(text=f"Round {current_round[0]}")
+        bomb_hit_chance_label.configure(text=f"Bomb Hit Chance: {int(bomb_hit_chance[0]*100)}%")
 
 def mult_purchase(row_frames, row, column):
     for frame in row_frames:
@@ -392,6 +400,7 @@ def restart_game():
     colors_purchased[0] = 0
     colors_removed[0] = 0
     purchased_mults[0] = 0
+    bomb_hit_chance[0] = 0
     buy_mult_button.configure(text="Buy Mult \n $5")
     color_add_button.configure(text="Add a Color \n $15")
     color_remove_button.configure(text="Remove a Color \n $50")
@@ -399,6 +408,7 @@ def restart_game():
     spins_remaining_label.configure(text=f"Spins remaining: {remaining_spins[0]}")
     rounds_label.configure(text=f"Round {current_round[0]}")
     cost_to_spin_label.configure(text="Cost per spin: $0")
+    bomb_hit_chance_label.configure(text=f"Bomb Hit Chance: {int(bomb_hit_chance[0]*100)}%")
     shop_frame.pack_forget()
     continue_button.configure(state="normal")
     continue_button.pack_forget()
@@ -480,6 +490,10 @@ def spin(chosen_colors, start_time, last_time, reel = 1, count = 0, total_moved 
     else:
         win.after(deltaT, spin, chosen_colors, start_time, current_time, reel, count, total_moved)
 
+
+bomb_image = Image.open("bomb.png")
+scaled_bomb_image = ctk.CTkImage(bomb_image, size=(50*SF,45*SF))
+
 # All the UI elements
 # I wish I could put these in a function :\ (I regret not making this with OOP)
 
@@ -544,6 +558,10 @@ tutorial_text = ctk.CTkLabel(tutorial_frame, wraplength=400, text="How to Play: 
 help_buttons_frame = ctk.CTkFrame(tutorial_frame, fg_color="transparent")
 tutorial_hideshow = ctk.CTkButton(help_buttons_frame, text="Show Tutorial", command=hideshow_tutorial)
 payline_info_hideshow = ctk.CTkButton(help_buttons_frame, text="Show Paylines", command=show_paylines_info)
+bomb_hit_chance_frame = ctk.CTkFrame(control_frame, fg_color="#A9A9A9")
+info_scaled_bomb_image = ctk.CTkImage(bomb_image, size=(50,50))
+bomb_hit_chance_image = ctk.CTkLabel(bomb_hit_chance_frame, image=info_scaled_bomb_image, text="")
+bomb_hit_chance_label = ctk.CTkLabel(bomb_hit_chance_frame, text="Bomb Hit Chance: 0%", text_color="black")
 
 money_label.pack()
 cost_to_spin_label.pack()
@@ -568,6 +586,9 @@ tutorial_hideshow.pack(padx=20, side="left", fill="x", expand=True)
 payline_info_hideshow.pack(padx=20, side="left", fill="x", expand=True)
 hideshow_tutorial()
 probability_labels_frame.pack(side="bottom", fill="x", pady=10)
+bomb_hit_chance_frame.pack(side="bottom")
+bomb_hit_chance_image.pack(side="left", padx=10)
+bomb_hit_chance_label.pack(side="right", padx=10)
 
 for color in colors:
     probability_labels[f"{color}"] = ctk.CTkLabel(probability_labels_frame, text=f"{color} \n 14.3%", text_color=f"{color}")
@@ -589,9 +610,6 @@ game_over_button = ctk.CTkButton(game_over_frame, text="Return to start screen",
 game_over_label.pack(padx=2000) # It makes it look cooler (trust)
 game_over_rounds_survived.pack()
 game_over_button.pack(pady=10)
-
-bomb_image = Image.open("bomb.png")
-scaled_bomb_image = ctk.CTkImage(bomb_image, size=(50*SF,45*SF))
 
 # Lots of boring bug fixing ill have to do with interacting with things when the game is over
 # -> Can buy perma free spins per round to a max of 5(?) out of total 10 spins
