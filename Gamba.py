@@ -2,7 +2,7 @@ import tkinter as tk
 import customtkinter as ctk
 import random
 import time
-from PIL import Image, ImageTk
+from PIL import Image
 
 win = ctk.CTk()
 win.title("Gamba")
@@ -20,7 +20,7 @@ mults = [[1,1,1],
          ]
 mult_labels = {}
 probability_labels = {}
-money = [10] # In dollars
+money = [1000] # In dollars
 remaining_spins = [1]
 current_round = [1]
 colors_purchased = [0]
@@ -154,7 +154,6 @@ def spin_button_click():
         random_column = random.randint(0, 2)
         random_row = random.randint(0, 2)
         chosen_colors[random_column][random_row + 2] = "BOMB"
-        print("bomb")
     
     start_time = time.perf_counter()
     money[0] -= ((current_round[0]-1)**2)/2 # Price per spin
@@ -181,23 +180,26 @@ def continue_button_click():
 def mult_purchase(row_frames, row, column):
     for frame in row_frames:
         frame.destroy()
-    new_mult = mults[column][row] + 1
-    mults[column][row] = new_mult
-    
+        
+    current_mult = mults[column][row]
     purchased_mults[0] += 1
     continue_button.configure(state="normal")
     buy_mult_button.configure(state="normal", text=f"Buy Mult \n ${4 + 2**purchased_mults[0]}")
     
-    if new_mult > 2 or new_mult == 1:
+    if (column,row) in mult_labels:
         old_label = mult_labels[(column, row)][0]
         old_label.destroy()
     
-    if new_mult != 1:
-        label = ctk.CTkLabel(canvas, width=50 * SF, height=10 * SF, text=f"❌ {new_mult}", font=("Arial", 20, "bold"), fg_color="lightsteelblue2", text_color="white")
-        mult_labels[(column,row)] = [label, new_mult] 
-        label.place(x=0 + column*50*SF, y=row*50*SF)
-    elif new_mult == 1:
+    if current_mult == 0:
+        mults[column][row] = current_mult + 1
         mult_labels.pop((column, row))
+    else:
+        mults[column][row] *= 2
+        new_mult = mults[column][row]
+        label = ctk.CTkLabel(canvas, width=50 * SF, height=10 * SF, text=f"❌ {new_mult}", font=("Arial", 20, "bold"),
+                             fg_color="lightsteelblue2", text_color="white")
+        mult_labels[(column, row)] = [label, new_mult]
+        label.place(x=0 + column * 50 * SF, y=row * 50 * SF)
         
 def buy_mult_click():
     if money[0] >= (4 + 2**purchased_mults[0]):
@@ -206,14 +208,21 @@ def buy_mult_click():
         continue_button.configure(state="disabled")
         buy_mult_button.configure(state="disabled")
         row_frames = []
-        for i in range(3):
+        for row in range(3):
             row_frame = ctk.CTkFrame(canvas, width=150*SF)
             row_frames.append(row_frame)
             row_frame.pack_propagate(False)
             row_frame.pack()
-            for j in range(3):
-                button = ctk.CTkButton(row_frame, width=50*SF, height=100*SF, command=lambda i=i, j=j: mult_purchase(row_frames, i, j))
+            for column in range(3):
+                mult_of_square = mults[column][row]
+                if mult_of_square == 0:
+                    new_mult = 1
+                else:
+                    new_mult = mult_of_square*2
+                button = ctk.CTkButton(row_frame, width=50*SF, height=100*SF, text=f"Click to place mult here \n\n New mult: x{new_mult}", command=lambda row=row, column=column: mult_purchase(row_frames, row, column))
                 button.pack(side="left", anchor="nw")
+            for mult in mult_labels.values():
+                mult[0].lift()
     else:
         buy_mult_button.configure(text="Not enough money!", state="disabled")
         win.after(1000, lambda: buy_mult_button.configure(text=f"Buy Mult \n ${4+2**purchased_mults[0]}", state="normal"))
@@ -227,6 +236,8 @@ def color_remove_click():
     if money[0] >= (49 + 5**(colors_removed[0]*2)):
         if color_remove_button.cget("text") != "Remove":
             continue_button.configure(state="disabled")
+            buy_mult_button.configure(state="disabled")
+            color_add_button.configure(state="disabled")
             color_remove_options.pack(side="bottom", pady=5)
             color_remove_button.configure(text="Remove")
         elif color_remove_options.get() == "Select a Color":
@@ -244,6 +255,8 @@ def color_remove_click():
             color_remove_options.pack_forget()
             color_remove_button.configure(text=f"Remove a Color \n ${(49 + 5**(colors_removed[0]*2))}")
             continue_button.configure(state="normal")
+            buy_mult_button.configure(state="normal")
+            color_add_button.configure(state="normal")
     else:
         color_remove_button.configure(text="Not enough money!", state="disabled")
         win.after(1000, lambda: color_remove_button.configure(text=f"Remove a Color \n ${(49 + 5**(colors_removed[0]*2))}", state="normal"))
@@ -252,6 +265,8 @@ def color_add_click():
     if money[0] >= (14 + 5**(colors_purchased[0]*2)):
         if color_add_button.cget("text") != "Add":
             continue_button.configure(state="disabled")
+            buy_mult_button.configure(state="disabled")
+            color_remove_button.configure(state="disabled")
             color_add_options.pack(side="bottom", pady=5)
             color_add_button.configure(text="Add")
         elif color_add_options.get() == "Select a Color":
@@ -268,6 +283,8 @@ def color_add_click():
             color_add_options.pack_forget()
             color_add_button.configure(text=f"Add a Color \n ${14 + 5**(colors_purchased[0]*2)}")
             continue_button.configure(state="normal")
+            buy_mult_button.configure(state="normal")
+            color_remove_button.configure(state="normal")
     else:
         color_add_button.configure(text="Not enough money!", state="disabled")
         win.after(1000, lambda: color_add_button.configure(text=f"Add a Color \n ${14 + 5**(colors_purchased[0]*2)}", state="normal"))
@@ -576,7 +593,6 @@ game_over_button.pack(pady=10)
 bomb_image = Image.open("bomb.png")
 scaled_bomb_image = ctk.CTkImage(bomb_image, size=(50*SF,45*SF))
 
-# Known bug: money doesn't subtract until you press add/remove a color button twice, causing issues if you press it once with enough money and don't have enough money on the second press
 # Lots of boring bug fixing ill have to do with interacting with things when the game is over
 # -> Can buy perma free spins per round to a max of 5(?) out of total 10 spins
 # -> Maybe also increase value of line pay (rn its $10 can upgrade to $20+)
