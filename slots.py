@@ -32,7 +32,7 @@ def ease_in_out_derivative(t):
     # Derivative of ease_in_out function t^2(3-2t)
     return 6*t*(1-t)
 
-def start_button_click():
+def start_button_click(start_frame):
     start_frame.pack_forget()
     game_frame.pack(expand=True, fill="both")
 
@@ -49,7 +49,7 @@ def round_complete():
     win.after(2000, lambda: money_label.configure(text=f"Money: ${money[0]}"))
     spin_button.pack_forget()
     tutorial_frame.pack_forget()
-    min_next_round_label.configure(text=f"Minimum for next round: ${((2**(current_round[0]))-1)*10}")
+    min_next_round_label.configure(text=f"Minimum for next round: ${((2**(current_round[0]))-1)*5}")
     min_next_round_label.pack()
     continue_button.pack(pady=20, padx=10)
     shop_frame.pack(fill="both", pady=10)
@@ -126,7 +126,6 @@ def bomb_hit(chosen_colors):
         return
 
     bomb_rectangle = ctk.CTkLabel(canvas, text="", image=scaled_bomb_image, fg_color="lightsteelblue2")
-    print((bomb_column, bomb_row), mult_labels)
     if (bomb_column, bomb_row) in mult_labels: # Ensures the bomb is always below the mult label on that square (if it exists)
         bomb_rectangle.lower(mult_labels[(bomb_column, bomb_row)][0])
     bomb_rectangle.place(relx=bomb_column/3, rely=bomb_row/3, y=5*SF)
@@ -180,7 +179,7 @@ def continue_button_click():
         spin_button.pack(pady=20, padx=10)
         tutorial_frame.pack(fill="both", expand=True)
         cost_to_spin_label.configure(text=f"Cost per spin: ${(2**(current_round[0]-1))-1}")
-        remaining_spins[0] = 10
+        remaining_spins[0] = 5
         spins_remaining_label.configure(text=f"Spins remaining: {remaining_spins[0]}")
         rounds_label.configure(text=f"Round {current_round[0]}")
         bomb_hit_chance_label.configure(text=f"Bomb Hit Chance: {int(bomb_hit_chance[0]*100)}%")
@@ -329,14 +328,25 @@ def create_spinner():
     canvas.create_line(300*SF - 5, 0, 300*SF - 5, 300 * SF, width=10, fill="lightsteelblue2")
     
 def create_start_screen():
+    # Tries to read records file to find best run
+    try:
+        with open("records.txt") as records:
+            best_run_text = records.readline()
+    except FileNotFoundError:
+        best_run_text = "Best Run: 0 Rounds Survived"
+        
+    start_frame = ctk.CTkFrame(win)
+    start_frame.pack(expand=True, fill="both")
     title_frame = ctk.CTkFrame(start_frame, fg_color="transparent")
     title_text = ctk.CTkLabel(title_frame, text="Slot Machine Simulator", font=("Arial", 75, "bold"))
     subtitle_text = ctk.CTkLabel(title_frame, text="gambling is bad, but not if you aren't spending real money!", font=("Arial", 30))
-    start_button = ctk.CTkButton(title_frame, text="Press to play", command=start_button_click)
+    best_run_label = ctk.CTkLabel(title_frame, text=best_run_text, font=("Arial", 20), text_color="red")
+    start_button = ctk.CTkButton(title_frame, text="Press to play", command=lambda: start_button_click(start_frame))
     title_frame.pack(expand=True)
     title_text.pack(pady=10)
     subtitle_text.pack()
-    start_button.pack(pady=40)
+    best_run_label.pack(pady=20)
+    start_button.pack()
     
 def create_spin_map():
     spin_map = []
@@ -386,7 +396,7 @@ def restart_game():
     game_over_frame.place(relx=-0.5, rely=0.5, anchor="center")
     game_over_frame.place_forget()
     game_frame.pack_forget()
-    start_frame.pack(expand=True, fill="both")
+    create_start_screen()
     colors.clear()
     colors.extend(["purple", "green", "pink", "yellow", "red", "blue", "black"])
     mults.clear()
@@ -440,6 +450,17 @@ def game_over():
     game_over_rounds_survived.configure(text=f"Rounds Survived: {current_round[0]}")
     tutorial_hideshow.configure(state="disabled")
     payline_info_hideshow.configure(state="disabled")
+    try:
+        best_run_file = open("records.txt", "r")
+        best_run_file.readline()
+        best_run = int(best_run_file.read(1))
+    except FileNotFoundError:
+        best_run = 0
+
+    if best_run < current_round[0]:
+        with open("records.txt", "w") as record:
+            record.write(f"Best Run: {current_round[0]} Rounds Survived \n") # 1st line will be duplicated on title screen
+            record.write(str(current_round[0])) # 2nd line is read by code to determine best_run
     animate_game_over(time.perf_counter(), time.perf_counter())
 
 def spin(chosen_colors, start_time, last_time, reel = 1, count = 0, total_moved = 0): 
@@ -484,21 +505,27 @@ def spin(chosen_colors, start_time, last_time, reel = 1, count = 0, total_moved 
             if(reel < 3): # Continues spinning excluding the current column if not all reels finished spinning
                 win.after(deltaT, spin, chosen_colors, current_time, current_time, reel+1)
             else:
-                print(spin_map, chosen_colors)
                 bomb_hit(chosen_colors) # Will change mult on square if bomb was hit
                 animate_paylines()
     else:
         win.after(deltaT, spin, chosen_colors, start_time, current_time, reel, count, total_moved)
 
-
-bomb_image = Image.open("bomb.png")
-scaled_bomb_image = ctk.CTkImage(bomb_image, size=(50*SF,45*SF))
+# Opens the images
+try:
+    # Using .copy() keeps the image saved in memory so I don't have to keep opening the images to access them
+    with Image.open(
+            "Images/bomb.png").copy() as bomb_image, Image.open("Images/Le Slot.png").copy() as le_slot_image, Image.open("Images/paylines.png").copy() as payline_info_image:
+        scaled_bomb_image = ctk.CTkImage(bomb_image, size=(50*SF,45*SF)) # For spinner
+        info_scaled_bomb_image = ctk.CTkImage(bomb_image, size=(50, 50)) # For bomb hit chance
+        scaled_le_slot_image = ctk.CTkImage(le_slot_image, size=(125*SF, 21*SF))
+        scaled_payline_info_image = ctk.CTkImage(payline_info_image, size=(800, 600))
+except FileNotFoundError as e:
+    print(f"Cannot access all image dependencies: {e}")
+    raise SystemExit
 
 # All the UI elements
 # I wish I could put these in a function :\ (I regret not making this with OOP)
 
-start_frame = ctk.CTkFrame(win)
-start_frame.pack(expand=True, fill="both")
 create_start_screen()
 
 game_frame = ctk.CTkFrame(win)
@@ -507,9 +534,7 @@ game_frame = ctk.CTkFrame(win)
 # Left UI
 slot_frame = ctk.CTkFrame(game_frame, fg_color="transparent")
 canvas = tk.Canvas(slot_frame, width=300*SF, height=300*SF, bg="black", highlightthickness=0)
-le_slot_image = Image.open("Le Slot.png")
-le_slot = ctk.CTkImage(le_slot_image, size=(125*SF, 21*SF))
-slot_title = ctk.CTkLabel(slot_frame, image=le_slot, text="")
+slot_title = ctk.CTkLabel(slot_frame, image=scaled_le_slot_image, text="")
 slot_frame.pack(side="left", padx=100, expand=True)
 control_frame = ctk.CTkFrame(game_frame, width=50*SF, height=300*SF)
 control_frame.pack_propagate(False)
@@ -559,7 +584,6 @@ help_buttons_frame = ctk.CTkFrame(tutorial_frame, fg_color="transparent")
 tutorial_hideshow = ctk.CTkButton(help_buttons_frame, text="Show Tutorial", command=hideshow_tutorial)
 payline_info_hideshow = ctk.CTkButton(help_buttons_frame, text="Show Paylines", command=show_paylines_info)
 bomb_hit_chance_frame = ctk.CTkFrame(control_frame, fg_color="#A9A9A9")
-info_scaled_bomb_image = ctk.CTkImage(bomb_image, size=(50,50))
 bomb_hit_chance_image = ctk.CTkLabel(bomb_hit_chance_frame, image=info_scaled_bomb_image, text="")
 bomb_hit_chance_label = ctk.CTkLabel(bomb_hit_chance_frame, text="Bomb Hit Chance: 0%", text_color="black")
 
@@ -595,9 +619,7 @@ for color in colors:
     probability_labels[f"{color}"].pack(side="left", fill="x", expand=True)
 
 payline_info_frame = ctk.CTkFrame(game_frame, width=800, height=600)
-payline_info_image = Image.open("paylines.png")
-payline_info = ctk.CTkImage(payline_info_image, size=(800, 600))
-payline_info_label = ctk.CTkLabel(payline_info_frame, image=payline_info, text="")
+payline_info_label = ctk.CTkLabel(payline_info_frame, image=scaled_payline_info_image, text="")
 payline_info_label.pack()
 payline_info_close = ctk.CTkButton(payline_info_frame, width=50, height=50, text="X", fg_color="red", command=close_paylines_info)
 payline_info_close.place(relx=1,rely=0, anchor="ne")
@@ -611,7 +633,6 @@ game_over_label.pack(padx=2000) # It makes it look cooler (trust)
 game_over_rounds_survived.pack()
 game_over_button.pack(pady=10)
 
-# Lots of boring bug fixing ill have to do with interacting with things when the game is over
 # -> Can buy perma free spins per round to a max of 5(?) out of total 10 spins
 # -> Maybe also increase value of line pay (rn its $10 can upgrade to $20+)
 
