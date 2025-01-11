@@ -5,32 +5,34 @@ import time
 from PIL import Image
 
 win = ctk.CTk()
-win.title("Gamba")
-win.geometry("1000x1000")
+win.title("Slots")
+win.geometry("1400x850")
 
-#Variables
-SF = 4 # Scale factor -- don't touch will remove later
 EXTRA_SPINS = 6 # Change to increase/decrease displacement of reel before stopping
-MOVE_AMOUNT = (800 + 100*EXTRA_SPINS)*SF
-chosenColorIndex = []
+MOVE_AMOUNT = (3200 + 400*EXTRA_SPINS) # Each rectangle is 400x400 pixels. Since there are seven rectangles, 3200 pixels is a full spin (400*(7+1)).
 colors = ["purple", "green", "pink", "yellow", "red", "blue", "black"]
 mults = [[1,1,1],
          [1,1,1],
          [1,1,1]
          ]
-mult_labels = {}
-probability_labels = {}
+mult_labels = {} # Each element is saved as {(column, row):label} where column and row take the values 0, 1 or 2
+probability_labels = {} # Each element is saved as {"color":label} where color is a color from the list colors
+
+# Saved as lists so they are mutable
 money = [10] # In dollars
-remaining_spins = [1]
+remaining_spins = [5]
 current_round = [1]
 colors_purchased = [0]
 colors_removed = [0]
 purchased_mults = [0]
-bomb_hit_chance = [0]
+bomb_hit_chance = [0.0] # Between 0 and 1
 
 def ease_in_out_derivative(t):
     # Derivative of ease_in_out function t^2(3-2t)
     return 6*t*(1-t)
+
+def spin_cost_calculation(the_current_round):
+    return (2**(the_current_round-1))-1
 
 def start_button_click(start_frame):
     start_frame.pack_forget()
@@ -49,13 +51,13 @@ def round_complete():
     win.after(2000, lambda: money_label.configure(text=f"Money: ${money[0]}"))
     spin_button.pack_forget()
     tutorial_frame.pack_forget()
-    min_next_round_label.configure(text=f"Minimum for next round: ${((2**(current_round[0]))-1)*5}")
+    min_next_round_label.configure(text=f"Minimum for next round: ${spin_cost_calculation(current_round[0]+1)*5}")
     min_next_round_label.pack()
     continue_button.pack(pady=20, padx=10)
     shop_frame.pack(fill="both", pady=10)
 
 def animate_paylines(paylines_animated=0):
-    if money[0] < ((2**(current_round[0]-1))-1):
+    if money[0] < (spin_cost_calculation(current_round[0])):
         game_over()
     else:       
         paylines = canvas.find_withtag("payline")
@@ -111,8 +113,10 @@ def calculate_paylines(chosen_colors):
             hits += 1
             mult = mults[0][payline[0][1]-2] * mults[1][payline[1][1]-2] * mults[2][payline[2][1]-2]
             line_pays += 10*mult
-            canvas.create_line(50*SF, ((payline[0][1]-2)*100+50)*SF, 150*SF, ((payline[1][1]-2)*100+50)*SF, width=7, state="hidden", fill="grey", tags=("payline",f"{10*mult}"))
-            canvas.create_line(150 * SF, ((payline[1][1] - 2) * 100 + 50) * SF, 250 * SF, ((payline[2][1] - 2) * 100 + 50) * SF, width=7, state="hidden", fill="grey", tags=("payline",f"{10*mult}"))
+            # The payline consists of two line segments, one connecting column 1 to 2 and another connecting column 2 to 3
+            # Since each rectangle is 400x400, 200 would be the center of any rectangle in column 1, 600 for column 2, and 1000 for column 3
+            canvas.create_line(200, (payline[0][1]-2)*400+200, 600, (payline[1][1]-2)*400+200, width=7, state="hidden", fill="grey", tags=("payline",f"{10*mult}"))
+            canvas.create_line(600, (payline[1][1] - 2)*400+200, 1000, (payline[2][1] - 2)*400+200, width=7, state="hidden", fill="grey", tags=("payline",f"{10*mult}"))
     if hits != 0:
         money[0] += line_pays*hits
 
@@ -127,19 +131,18 @@ def bomb_hit(chosen_colors):
 
     bomb_rectangle = ctk.CTkLabel(canvas, text="", image=scaled_bomb_image, fg_color="lightsteelblue2")
     if (bomb_column, bomb_row) in mult_labels: # Ensures the bomb is always below the mult label on that square (if it exists)
-        bomb_rectangle.lower(mult_labels[(bomb_column, bomb_row)][0])
-    bomb_rectangle.place(relx=bomb_column/3, rely=bomb_row/3, y=5*SF)
+        bomb_rectangle.lower(mult_labels[(bomb_column, bomb_row)])
+    bomb_rectangle.place(relx=bomb_column/3, rely=bomb_row/3, y=20)
     win.after(500, lambda: bomb_rectangle.destroy())
     
-    if mults[bomb_column][bomb_row] > 0:
-        mults[bomb_column][bomb_row] = 0
-        if (bomb_column, bomb_row) in mult_labels:
-            old_label = mult_labels[(bomb_column, bomb_row)][0]
-            old_label.destroy()
-        label = ctk.CTkLabel(canvas, width=50 * SF, height=10 * SF, text=f"❌ {0}",
-                             font=("Arial", 20, "bold"), fg_color="lightsteelblue2", text_color="white")
-        mult_labels[(bomb_column, bomb_row)] = [label, 0]
-        label.place(x=0 + bomb_column * 50 * SF, y=bomb_row * 50 * SF)
+    mults[bomb_column][bomb_row] = 0
+    if (bomb_column, bomb_row) in mult_labels:
+        old_label = mult_labels[(bomb_column, bomb_row)]
+        old_label.destroy()
+    label = ctk.CTkLabel(canvas, width=200, height=40, text=f"❌ {0}",
+                         font=("Arial", 20, "bold"), fg_color="lightsteelblue2", text_color="white")
+    mult_labels[(bomb_column, bomb_row)] = label
+    label.place(x=0 + bomb_column * 200, y=bomb_row * 200)
 
 def spin_button_click():   
     spin_button.configure(state="disabled")
@@ -162,14 +165,14 @@ def spin_button_click():
         chosen_colors[random_column][random_row + 2] = "BOMB"
     
     start_time = time.perf_counter()
-    money[0] -= (2**(current_round[0]-1))-1 # Price per spin
+    money[0] -= spin_cost_calculation(current_round[0]) # Price per spin
     money_label.configure(text=f"Money: ${money[0]}")
     calculate_paylines(chosen_colors)
     spin(chosen_colors, start_time, start_time)
     
 def continue_button_click():
     current_round[0] += 1
-    if money[0] < ((2**(current_round[0]-1))-1):
+    if money[0] < (spin_cost_calculation(current_round[0])):
         game_over()
     else:
         continue_button.configure(state="disabled")
@@ -178,7 +181,7 @@ def continue_button_click():
         min_next_round_label.pack_forget()
         spin_button.pack(pady=20, padx=10)
         tutorial_frame.pack(fill="both", expand=True)
-        cost_to_spin_label.configure(text=f"Cost per spin: ${(2**(current_round[0]-1))-1}")
+        cost_to_spin_label.configure(text=f"Cost per spin: ${spin_cost_calculation(current_round[0])}")
         remaining_spins[0] = 5
         spins_remaining_label.configure(text=f"Spins remaining: {remaining_spins[0]}")
         rounds_label.configure(text=f"Round {current_round[0]}")
@@ -194,7 +197,7 @@ def mult_purchase(row_frames, row, column):
     buy_mult_button.configure(state="normal", text=f"Buy Mult \n ${4 + 2**purchased_mults[0]}")
     
     if (column,row) in mult_labels:
-        old_label = mult_labels[(column, row)][0]
+        old_label = mult_labels[(column, row)]
         old_label.destroy()
     
     if current_mult == 0:
@@ -203,10 +206,10 @@ def mult_purchase(row_frames, row, column):
     else:
         mults[column][row] *= 2
         new_mult = mults[column][row]
-        label = ctk.CTkLabel(canvas, width=50 * SF, height=10 * SF, text=f"❌ {new_mult}", font=("Arial", 20, "bold"),
+        label = ctk.CTkLabel(canvas, width=200, height=40, text=f"❌ {new_mult}", font=("Arial", 20, "bold"),
                              fg_color="lightsteelblue2", text_color="white")
-        mult_labels[(column, row)] = [label, new_mult]
-        label.place(x=0 + column * 50 * SF, y=row * 50 * SF)
+        mult_labels[(column, row)] = label
+        label.place(x=column * 200, y=row * 200)
         
 def buy_mult_click():
     if money[0] >= (4 + 2**purchased_mults[0]):
@@ -215,8 +218,10 @@ def buy_mult_click():
         continue_button.configure(state="disabled")
         buy_mult_button.configure(state="disabled")
         row_frames = []
+        
+        # The following creates a 3x3 grid of buttons on the spinner that you click to buy a multiplier in that spot
         for row in range(3):
-            row_frame = ctk.CTkFrame(canvas, width=150*SF)
+            row_frame = ctk.CTkFrame(canvas, width=600)
             row_frames.append(row_frame)
             row_frame.pack_propagate(False)
             row_frame.pack()
@@ -226,10 +231,10 @@ def buy_mult_click():
                     new_mult = 1
                 else:
                     new_mult = mult_of_square*2
-                button = ctk.CTkButton(row_frame, width=50*SF, height=100*SF, text=f"Click to place mult here \n\n New mult: x{new_mult}", command=lambda row=row, column=column: mult_purchase(row_frames, row, column))
+                button = ctk.CTkButton(row_frame, width=200, height=400, text=f"Click to place mult here \n\n New mult: x{new_mult}", command=lambda row=row, column=column: mult_purchase(row_frames, row, column))
                 button.pack(side="left", anchor="nw")
-            for mult in mult_labels.values():
-                mult[0].lift()
+            for mult_label in mult_labels.values():
+                mult_label.lift()
     else:
         buy_mult_button.configure(text="Not enough money!", state="disabled")
         win.after(1000, lambda: buy_mult_button.configure(text=f"Buy Mult \n ${4+2**purchased_mults[0]}", state="normal"))
@@ -301,7 +306,7 @@ def hideshow_tutorial():
         tutorial_text.pack_forget()
         tutorial_hideshow.configure(text="Show Tutorial")
     elif tutorial_hideshow.cget("text") == "Show Tutorial":
-        tutorial_text.pack(pady=10)
+        tutorial_text.pack()
         tutorial_hideshow.configure(text="Hide Tutorial")
 
 def show_paylines_info():
@@ -314,18 +319,21 @@ def close_paylines_info():
     
 def create_spinner(): 
     # Reels
-    color_heights = (600/(len(colors)-1))*SF
-    for i in range(1, 4):
-        for count, j in enumerate(colors):
-            canvas.create_rectangle(0 + 100*(i-1)*SF, (count)*color_heights-200*SF, 100*i*SF, (count+1)*color_heights-200*SF, fill=j, tags=f"reel{i}")
+    color_heights = 400
+    for i in range(1, 4): # Columns
+        for count, j in enumerate(colors): # Rows
+            # We draw 7 rectangles per column, but most are drawn off the visible area of the canvas. Top left corner of spinner canvas is (0,0), Bottom right corner of spinner canvas is (1200,1200)
+            canvas.create_rectangle(400*(i-1), count*color_heights-800, 400*i, (count+1)*color_heights-800, fill=j, tags=f"reel{i}")
+    
+    # Below are the borders of the spinner
     for i in range(1, 3): # Horizontal Lines
-        canvas.create_line(0, 100*SF*i, 300*SF, 100*SF*i, width=10, fill="lightsteelblue2")
-    canvas.create_line(0, 5, 300*SF, 5, width=10, fill="lightsteelblue2")
-    canvas.create_line(0, 300*SF-5, 300 * SF, 300*SF-5, width=10, fill="lightsteelblue2")
+        canvas.create_line(0, 400*i, 1200, 400*i, width=10, fill="lightsteelblue2")
+    canvas.create_line(0, 5, 1200, 5, width=10, fill="lightsteelblue2")
+    canvas.create_line(0, 1200-5, 1200, 1200-5, width=10, fill="lightsteelblue2")
     for i in range(1, 3): # Vertical Lines
-        canvas.create_line(100*SF*i, 0, 100*SF*i, 300*SF, width=10, fill="lightsteelblue2")
-    canvas.create_line(5, 0, 5, 300*SF, width=10, fill="lightsteelblue2")
-    canvas.create_line(300*SF - 5, 0, 300*SF - 5, 300 * SF, width=10, fill="lightsteelblue2")
+        canvas.create_line(400*i, 0, 400*i, 1200, width=10, fill="lightsteelblue2")
+    canvas.create_line(5, 0, 5, 1200, width=10, fill="lightsteelblue2")
+    canvas.create_line(1200 - 5, 0, 1200 - 5, 1200, width=10, fill="lightsteelblue2")
     
 def create_start_screen():
     # Tries to read records file to find best run
@@ -360,10 +368,9 @@ def create_spin_map():
     
 def update_spin_map(spinning_reels, chosen_colors, count):
     spinning_reels = len(spinning_reels) // 7 # Will give a value of 3 2 or 1 depending on how many reels are still spinning
-    NUM_COLORS = 3
-    spinning_column = NUM_COLORS - spinning_reels
+    spinning_column = 3 - spinning_reels
     count -= EXTRA_SPINS # Once count is >=0, that means we are on the last spin for the current column -> must match colors with the predetermined ones rather than randomizing
-    distance_travelled = count*100*SF
+    distance_travelled = count*400
     
     if distance_travelled >= 0: # If on last spin, start changing the colors of spinning column to what they should be
         # We do this by deleting the last rectangle in the currently spinning column off the spin map
@@ -397,6 +404,9 @@ def restart_game():
     game_over_frame.place_forget()
     game_frame.pack_forget()
     create_start_screen()
+    
+    # Resets all variables to default
+    # I know, using OOP would have made this a lot easier
     colors.clear()
     colors.extend(["purple", "green", "pink", "yellow", "red", "blue", "black"])
     mults.clear()
@@ -427,7 +437,7 @@ def restart_game():
     tutorial_hideshow.configure(state="normal")
     payline_info_hideshow.configure(state="normal")
     for mult_label in mult_labels.values():
-        mult_label[0].destroy()
+        mult_label.destroy()
     mult_labels.clear()
     update_probabilities()
 
@@ -453,7 +463,7 @@ def game_over():
     try:
         best_run_file = open("records.txt", "r")
         best_run_file.readline()
-        best_run = int(best_run_file.read(1))
+        best_run = int(best_run_file.readline())
     except FileNotFoundError:
         best_run = 0
 
@@ -480,20 +490,21 @@ def spin(chosen_colors, start_time, last_time, reel = 1, count = 0, total_moved 
     elapsed = (current_time-start_time)/duration_of_spin
     dt = current_time - last_time
     if elapsed > 1:
-        total_moved = 100*SF
+        total_moved = 400
         elapsed = 1
     ease_velocity = ease_in_out_derivative(elapsed) * MOVE_AMOUNT
     move_amount = (ease_velocity*dt)/duration_of_spin
     
-    # Moves all rectangles in spinning_reels. Moves rectangles back up to the top if reaching the edge of the canvas
+    # Moves all rectangles in spinning_reels. Moves rectangles back up to the top if reaching the "edge" of the canvas
+    # The reason the rectangles extend much further out from the actual dimensions of the canvas is because otherwise the animation will look choppy (blame tkinter)
     for rectangle in spinning_reels:
         x1, y1, x2, y2 = canvas.coords(rectangle)
         canvas.move(rectangle, 0, move_amount)
-        if y2 >= 700*SF:
-            canvas.move(rectangle, 0, -700*SF)
+        if y2 >= 2800:
+            canvas.move(rectangle, 0, -2800)
     
     total_moved += move_amount
-    if total_moved >= 100*SF: # The width of a rectangle
+    if total_moved >= 400: # The width of a rectangle
         update_spin_map(spinning_reels, chosen_colors, count)
             
         if count != 7+EXTRA_SPINS: # Keep recursively calling the spin function until the reel has spun at least once (7 rectangles) plus some additional rectangles specified with the EXTRA_SPINS variable
@@ -501,8 +512,8 @@ def spin(chosen_colors, start_time, last_time, reel = 1, count = 0, total_moved 
         else:
             for rectangle in reels[reel - 1]: # Nudges all rectangles in current reel to exact position
                 x1, y1, x2, y2 = canvas.coords(rectangle)
-                canvas.coords(rectangle, x1, (round(y1 / (100*SF)) * 100*SF), x2, (round(y2 / (100*SF)) * 100*SF))
-            if(reel < 3): # Continues spinning excluding the current column if not all reels finished spinning
+                canvas.coords(rectangle, x1, (round(y1 / 400) * 400), x2, (round(y2 / 400) * 400))
+            if reel < 3: # Continues spinning excluding the current column if not all reels finished spinning
                 win.after(deltaT, spin, chosen_colors, current_time, current_time, reel+1)
             else:
                 bomb_hit(chosen_colors) # Will change mult on square if bomb was hit
@@ -515,9 +526,9 @@ try:
     # Using .copy() keeps the image saved in memory so I don't have to keep opening the images to access them
     with Image.open(
             "Images/bomb.png").copy() as bomb_image, Image.open("Images/Le Slot.png").copy() as le_slot_image, Image.open("Images/paylines.png").copy() as payline_info_image:
-        scaled_bomb_image = ctk.CTkImage(bomb_image, size=(50*SF,45*SF)) # For spinner
+        scaled_bomb_image = ctk.CTkImage(bomb_image, size=(200,180)) # For spinner
         info_scaled_bomb_image = ctk.CTkImage(bomb_image, size=(50, 50)) # For bomb hit chance
-        scaled_le_slot_image = ctk.CTkImage(le_slot_image, size=(125*SF, 21*SF))
+        scaled_le_slot_image = ctk.CTkImage(le_slot_image, size=(500, 84))
         scaled_payline_info_image = ctk.CTkImage(payline_info_image, size=(800, 600))
 except FileNotFoundError as e:
     print(f"Cannot access all image dependencies: {e}")
@@ -529,14 +540,13 @@ except FileNotFoundError as e:
 create_start_screen()
 
 game_frame = ctk.CTkFrame(win)
-#game_frame.pack(expand=True, fill="both")
 
 # Left UI
 slot_frame = ctk.CTkFrame(game_frame, fg_color="transparent")
-canvas = tk.Canvas(slot_frame, width=300*SF, height=300*SF, bg="black", highlightthickness=0)
+canvas = tk.Canvas(slot_frame, width=1200, height=1200, bg="black", highlightthickness=0)
 slot_title = ctk.CTkLabel(slot_frame, image=scaled_le_slot_image, text="")
 slot_frame.pack(side="left", padx=100, expand=True)
-control_frame = ctk.CTkFrame(game_frame, width=50*SF, height=300*SF)
+control_frame = ctk.CTkFrame(game_frame, width=200, height=1200)
 control_frame.pack_propagate(False)
 control_frame.pack(side="right", fill="both", expand=True)
 slot_title.pack(pady=10)
@@ -573,13 +583,15 @@ tutorial_frame = ctk.CTkFrame(control_frame, fg_color="transparent")
 tutorial_text = ctk.CTkLabel(tutorial_frame, wraplength=400, text="How to Play: \n\n "
                                                   "The goal is to last as many rounds as possible. \n\n"
                                                   "You spend money on spins that cost more and more each round. \n\n"
-                                                  "After enough spins, you will move on to the next round. \n\n"
+                                                  "After 5 spins, you will move on to the next round. \n\n"
                                                   "You get a payout for surviving each round. \n\n"
                                                   "Prepare for the next round by purchasing upgrades in the shop. \n\n"
                                                   "You can only buy upgrades in between rounds. \n\n"
-                                                  "The percentages below are the chances of each color showing up. \n\n"                
-                                                  "The game ends if you cannot afford another spin. \n\n"
-                                                  "Good luck!")
+                                                  "The percentages below are the chances of each color showing up. \n\n"
+                                                  "There is also a bomb hit chance which increases every round by 4%. \n\n"
+                                                  "If you hit a bomb, the multiplier on that square drops to 0x. \n\n"
+                                                  "It's a good idea to purchase multipliers to remove the 0x. \n\n"  
+                                                  "The game ends if you cannot afford another spin. GL!")
 help_buttons_frame = ctk.CTkFrame(tutorial_frame, fg_color="transparent")
 tutorial_hideshow = ctk.CTkButton(help_buttons_frame, text="Show Tutorial", command=hideshow_tutorial)
 payline_info_hideshow = ctk.CTkButton(help_buttons_frame, text="Show Paylines", command=show_paylines_info)
@@ -590,7 +602,6 @@ bomb_hit_chance_label = ctk.CTkLabel(bomb_hit_chance_frame, text="Bomb Hit Chanc
 money_label.pack()
 cost_to_spin_label.pack()
 spin_button.pack(pady=20, padx=10)
-shop_frame.pack(fill="both", pady=10)
 items_frame1_title.pack()
 items_frame1.pack_propagate(False)
 items_frame1.pack(fill="x", padx=10)
@@ -633,8 +644,4 @@ game_over_label.pack(padx=2000) # It makes it look cooler (trust)
 game_over_rounds_survived.pack()
 game_over_button.pack(pady=10)
 
-# -> Can buy perma free spins per round to a max of 5(?) out of total 10 spins
-# -> Maybe also increase value of line pay (rn its $10 can upgrade to $20+)
-
-shop_frame.pack_forget()
 win.mainloop()
