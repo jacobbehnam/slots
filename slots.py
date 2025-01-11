@@ -51,7 +51,7 @@ def round_complete():
     win.after(2000, lambda: money_label.configure(text=f"Money: ${money[0]}"))
     spin_button.pack_forget()
     tutorial_frame.pack_forget()
-    min_next_round_label.configure(text=f"Minimum for next round: ${spin_cost_calculation(current_round[0]+1)*5}")
+    min_next_round_label.configure(text=f"Total spin cost for next round: ${spin_cost_calculation(current_round[0]+1)*5}")
     min_next_round_label.pack()
     continue_button.pack(pady=20, padx=10)
     shop_frame.pack(fill="both", pady=10)
@@ -154,7 +154,6 @@ def spin_button_click():
     for j in range(3):
         column = []
         for i in range(7):
-            #column.append(colors[2])
             column.append(colors[random.randint(0,len(colors)-1)])
         chosen_colors.append(column)
     
@@ -195,6 +194,8 @@ def mult_purchase(row_frames, row, column):
     purchased_mults[0] += 1
     continue_button.configure(state="normal")
     buy_mult_button.configure(state="normal", text=f"Buy Mult \n ${4 + 2**purchased_mults[0]}")
+    color_remove_button.configure(state="normal")
+    color_add_button.configure(state="normal")
     
     if (column,row) in mult_labels:
         old_label = mult_labels[(column, row)]
@@ -217,11 +218,14 @@ def buy_mult_click():
         money_label.configure(text=f"Money: ${money[0]}")
         continue_button.configure(state="disabled")
         buy_mult_button.configure(state="disabled")
+        color_remove_button.configure(state="disabled")
+        color_add_button.configure(state="disabled")
         row_frames = []
+        print(spin_map)
         
         # The following creates a 3x3 grid of buttons on the spinner that you click to buy a multiplier in that spot
         for row in range(3):
-            row_frame = ctk.CTkFrame(canvas, width=600)
+            row_frame = ctk.CTkFrame(canvas, width=600, corner_radius=0)
             row_frames.append(row_frame)
             row_frame.pack_propagate(False)
             row_frame.pack()
@@ -231,7 +235,9 @@ def buy_mult_click():
                     new_mult = 1
                 else:
                     new_mult = mult_of_square*2
-                button = ctk.CTkButton(row_frame, width=200, height=400, text=f"Click to place mult here \n\n New mult: x{new_mult}", command=lambda row=row, column=column: mult_purchase(row_frames, row, column))
+                # By setting the backgrounds of the buttons to the same color as the rectangles on the spinner, it makes the buttons look transparent
+                button = ctk.CTkButton(row_frame, width=200, height=400, corner_radius=0, fg_color=f"{spin_map[column][row+2][1]}", hover_color="white", text_color="#A9A9A9", font=("Arial", 14, "bold"),
+                                       text=f"Click to place mult here \n\n New mult: x{new_mult}", command=lambda row=row, column=column: mult_purchase(row_frames, row, column))
                 button.pack(side="left", anchor="nw")
             for mult_label in mult_labels.values():
                 mult_label.lift()
@@ -559,7 +565,7 @@ money_label = ctk.CTkLabel(control_frame, width = 100, height=50, text=f"Money: 
 cost_to_spin_label = ctk.CTkLabel(control_frame, width=100, height=50, text="Cost per spin: $0")
 rounds_label = ctk.CTkLabel(control_frame, width = 100, height=50, text="Round 1")
 spins_remaining_label = ctk.CTkLabel(control_frame, width=100, height=50, text=f"Spins remaining: {remaining_spins[0]}")
-min_next_round_label = ctk.CTkLabel(control_frame, width=100, height=50, text="Minimum for next round: $0")
+min_next_round_label = ctk.CTkLabel(control_frame, width=100, height=50, text="Total spin cost for next round: $0")
 rounds_label.pack(side="top", anchor="nw")
 spins_remaining_label.pack(side="top", anchor="nw", padx=25)
 spin_button = ctk.CTkButton(control_frame, text="Spin", command=spin_button_click)
@@ -632,7 +638,7 @@ for color in colors:
 payline_info_frame = ctk.CTkFrame(game_frame, width=800, height=600)
 payline_info_label = ctk.CTkLabel(payline_info_frame, image=scaled_payline_info_image, text="")
 payline_info_label.pack()
-payline_info_close = ctk.CTkButton(payline_info_frame, width=50, height=50, text="X", fg_color="red", command=close_paylines_info)
+payline_info_close = ctk.CTkButton(payline_info_frame, width=50, height=50, text="X", fg_color="red", hover_color="darkred", command=close_paylines_info)
 payline_info_close.place(relx=1,rely=0, anchor="ne")
 
 game_over_font = ctk.CTkFont(family="Arial", size=100, weight="bold")
