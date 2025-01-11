@@ -10,7 +10,7 @@ A fun personal project I worked on throughout my first semester of University, w
 - Spend the cash to upgrade your board through multiplier upgrades and probability modifiers
 - Make enough money to not lose to the exponentially costlier spins
 
-![](\Images\slotgif.gif)
+![](Images/slotgif.gif)
 
 ## Tools and Libraries 🛠️
 ***
